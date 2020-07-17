@@ -697,10 +697,11 @@ Below is a list of products and Windows OSes that have been tested as of
 
 
 
-| Operating System         | Version         | Vulnerable |
-| :----------------------- | :------         | :--------: |
-| Windows 7 Enterprise x86 | 6.1.7601        | Yes        |
-| Windows 10 Pro x64       | 10.0.18363.900  | Yes        |
+| Operating System                    | Version         | Vulnerable |
+| :---------------------------------- | :-------------- | :--------: |
+| Windows 7 Enterprise x86            | 6.1.7601        | Yes        |
+| Windows 10 Pro x64                  | 10.0.18363.900  | Yes        |
+| Windows 10 Pro Insider Preview x64  | 10.0.20170.1000 | Yes        |
 
 | Security Product                    | Version       | Vulnerable |
 | :---------------------------------- | :------------ | :--------: |
@@ -708,6 +709,10 @@ Below is a list of products and Windows OSes that have been tested as of
 | Windows Defender Engine             | 1.1.17200.2   | Yes        |
 | Windows Defender Antivirus          | 1.319.1127.0  | Yes        |
 | Windows Defender Antispyware        | 1.319.1127.0  | Yes        |
+| Windows Defender AntiMalware Client | 4.18.2007.6   | Yes        |
+| Windows Defender Engine             | 1.1.17300.2   | Yes        |
+| Windows Defender Antivirus          | 1.319.1676.0  | Yes        |
+| Windows Defender Antispyware        | 1.319.1676.0  | Yes        |
 
 # Source 
 This repo contains a tool for exercising the herpaderping method of process 
