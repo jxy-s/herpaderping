@@ -27,14 +27,14 @@ HRESULT Utils::MatchParameter(
 
     if (Long.has_value() && (Arg[0] == L'-') && (Arg[1] == L'-'))
     {
-        if (Arg.ends_with(*Long))
+        if (wcscmp(&Arg[2], Long->data()) == 0)
         {
             return S_OK;
         }
     }
     if (Short.has_value() && ((Arg[0] == L'-') || (Arg[0] == L'/')))
     {
-        if (Arg.ends_with(*Short))
+        if (wcscmp(&Arg[1], Short->data()) == 0)
         {
             return S_OK;
         }
@@ -66,7 +66,8 @@ HRESULT Utils::HandleCommandLineArgs(
     std::optional<std::wstring_view> Header,
     IArgumentParser& Parser)
 {
-    if (SUCCEEDED(CheckForHelpOptions(Argc, Argv)))
+    if (SUCCEEDED(CheckForHelpOptions(Argc, Argv)) ||
+        FAILED(Parser.ParseArguments(Argc, Argv)))
     {
         if (Header.has_value())
         {
@@ -76,7 +77,7 @@ HRESULT Utils::HandleCommandLineArgs(
         return E_FAIL;
     }
 
-    RETURN_HR(Parser.ParseArguments(Argc, Argv));
+    return S_OK;
 }
 
 _Use_decl_annotations_
