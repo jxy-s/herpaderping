@@ -375,7 +375,7 @@ NTSTATUS __fastcall MiCreateImageOrDataSection(
 :HaveFileObject
 //...
         //
-        // Sore some information in the packet and the local CONTROL_AREA to 
+        // Store some information in the packet and the local CONTROL_AREA to 
         // maintain state for further calls.
         //
         ObfReferenceObject(fileObject);
