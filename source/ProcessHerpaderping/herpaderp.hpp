@@ -13,13 +13,13 @@ namespace Herpaderp
     /// <summary>
     /// Executes process herpaderping.
     /// </summary>
-    /// <param name="TargetBinary">
-    /// Target binary to execute.
+    /// <param name="SourceFileName">
+    /// Source binary to execute.
     /// </param>
-    /// <param name="FileName">
-    /// File name to copy target to and obfuscate.
+    /// <param name="TargetFileName">
+    /// File name to copy source to and obfuscate.
     /// </param>
-    /// <param name="ReplaceWith">
+    /// <param name="ReplaceWithFileName">
     /// Optional, if provided the file is replaced with the content of this 
     /// file. If not provided the file is overwritten with a pattern.
     /// </param>
@@ -37,9 +37,9 @@ namespace Herpaderp
     /// Success if the herpaderping executed. Failure otherwise.
     /// </returns>
     _Must_inspect_result_ HRESULT ExecuteProcess(
-        _In_ const std::wstring& TargetBinary,
-        _In_ const std::wstring& FileName,
-        _In_opt_ const std::optional<std::wstring>& ReplaceWith,
+        _In_ const std::wstring& SourceFileName,
+        _In_ const std::wstring& TargetFileName,
+        _In_opt_ const std::optional<std::wstring>& ReplaceWithFileName,
         _In_ std::span<const uint8_t> Pattern, 
         _In_ bool WaitForProcess,
         _In_ bool HoldHandleExclusive);

@@ -697,20 +697,24 @@ key differences:
 
 #### Process Hollowing
 Process hollowing involves modifying the mapped section before execution 
-begins, this involves: `map -> modify section -> execute`. This differs from 
-herpaderping where there is no section modification. This is fairly easily 
-caught by security products by seeing there is a modification to the intended 
-execution path.
+begins, abstractly this looks like: `map -> modify section -> execute`. This 
+results in the intended execution flow of the hollowed process diverging into 
+unintended code. Doppelganging might be considered a form of hollowing. 
+However, hollowing, in my opinion, is closer to injection. In that hollowing 
+usually involves an explicit write to the already mapped code. This differs 
+from herpaderping where there are no modified sections.
 
 #### Process Doppelganging
 Process doppelganging is closer to herpaderping. Doppelganging abuses 
-transacted file operations, this involves: 
+transacted file operations, this generally involves these steps: 
 `transact -> write -> map -> rollback -> execute`. 
 In this scenario, the OS will create the image section and account for 
-transactions, so the cached image section is what you wrote to the transaction. 
-The OS has patched this. You may no longer map an image section when a file has 
-an active transaction. This differs from herpaderping in that herpaderping does 
-not rely on transacted file operations.
+transactions, so the cached image section ends up being what you wrote to the 
+transaction. The OS has patched this. Well, they patched the crash this caused. 
+Maybe they consider this a "legal" use of a transaction. Thankfully, Windows 
+Defender does catch the doppelganging technique. Doppelganging differs from 
+herpaderping in that herpaderping does not rely on transacted file operations. 
+And Defender doesn't catch herpaderping.
 
 ### Comparison
 For reference, the generalized techniques: 
@@ -721,10 +725,8 @@ For reference, the generalized techniques:
 | Herpaderping  | `write -> map -> modify -> execute -> close`      |
 
 We can see the differences laid out here. While herpaderping is arguably 
-noisier than doppelganing, in that the malicious bits do hit the disk, we've 
-seen that security products are still incapable of detecting it. And the patch 
-for deppelganging is insufficient for preventing a malicious image section 
-from being mapped. 
+noisier than doppelganging, in that the malicious bits do hit the disk, we've 
+seen that security products are still incapable of detecting herpaderping. 
 
 ## Possible Solution
 There is not a clear fix here. It seems reasonable that preventing an image 
@@ -733,7 +735,7 @@ should close the hole. However, that may or may not be a practical solution.
 
 ## Known Affected Platforms
 Below is a list of products and Windows OSes that have been tested as of 
-(7/14/2020). Tests were preformed with a known malicious binary.
+(7/14/2020). Tests were carried out with a known malicious binary.
 
 | Operating System                    | Version         | Vulnerable |
 | :---------------------------------- | :-------------- | :--------: |
@@ -757,12 +759,12 @@ This repo contains a tool for exercising the herpaderping method of process
 obfuscation. Usage is as follows:
 ```
 Process Herpaderping Tool - Copyright (c) Johnny Shaw
-ProcessHerpaderping.exe TargetBinary FileName [ReplacedWith] [Options...]
+ProcessHerpaderping.exe SourceFile TargetFile [ReplacedWith] [Options...]
 Usage:
-  TargetBinary             Target binary to execute.
-  FileName                 File name to execute the binary from.
-  ReplacedWith             File to replace the binary with. Optional,
-                           defaults overwrites the binary with a pattern.
+  SourceFile               Source file to execute.
+  TargetFile               Target file to execute the source from.
+  ReplacedWith             File to replace the target with. Optional,
+                           default overwrites the binary with a pattern.
   -h,--help                Prints tool usage.
   -d,--do-not-wait         Does not wait for spawned process to exit,
                            default waits.
@@ -783,8 +785,8 @@ Usage:
 ```
 
 ## Cloning and Building
-The repo uses submouldes, after cloning be sure to init and update the 
-submobules. Projects files are targeted to Visual Studio 2019.
+The repo uses submodules, after cloning be sure to init and update the 
+submodules. Projects files are targeted to Visual Studio 2019.
 ```
 git clone https://github.com/jxy-s/herpaderping.git
 cd .\herpaderping\
