@@ -14,8 +14,7 @@ HRESULT Herpaderp::ExecuteProcess(
     const std::wstring& TargetBinary,
     const std::wstring& FileName,
     const std::optional<std::wstring>& ReplaceWith,
-    const uint8_t* Pattern,
-    size_t PatternLength,
+    std::span<const uint8_t> Pattern, 
     bool WaitForProcess,
     bool HoldHandleExclusive)
 {
@@ -233,7 +232,6 @@ HRESULT Herpaderp::ExecuteProcess(
             hr = Utils::OverwriteFileAfterWithPattern(targetHandle.get(),
                                                       replaceWithSize,
                                                       Pattern,
-                                                      PatternLength, 
                                                       bytesWritten);
             if (FAILED(hr))
             {
@@ -262,8 +260,7 @@ HRESULT Herpaderp::ExecuteProcess(
         Utils::Log(Log::Success, L"Overwriting target with pattern");
 
         hr = Utils::OverwriteFileContentsWithPattern(targetHandle.get(),
-                                                     Pattern,
-                                                     PatternLength);
+                                                     Pattern);
         if (FAILED(hr))
         {
             Utils::Log(Log::Error, hr, L"Failed to write pattern over file");

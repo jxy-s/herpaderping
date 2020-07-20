@@ -246,8 +246,7 @@ void Utils::Log(
 _Use_decl_annotations_
 HRESULT Utils::FillBufferWithPattern(
     std::vector<uint8_t>& Buffer,
-    const uint8_t* Pattern,
-    size_t PatternLength)
+    std::span<const uint8_t> Pattern)
 {
     if (Buffer.empty())
     {
@@ -257,14 +256,14 @@ HRESULT Utils::FillBufferWithPattern(
     auto bytesRemaining = Buffer.size();
     while (bytesRemaining > 0)
     {
-        auto len = (PatternLength > bytesRemaining ? 
+        auto len = (Pattern.size() > bytesRemaining ? 
                     bytesRemaining 
                     : 
-                    PatternLength);
+                    Pattern.size());
 
         std::memcpy(&Buffer[Buffer.size() - bytesRemaining],
-                    Pattern,
-                    len);
+                    Pattern.data(),
+                    Pattern.size());
 
         bytesRemaining -= len;
     }
@@ -389,8 +388,7 @@ HRESULT Utils::CopyFileByHandle(
 _Use_decl_annotations_
 HRESULT Utils::OverwriteFileContentsWithPattern(
     handle_t FileHandle,
-    const uint8_t* Pattern,
-    size_t PatternLength)
+    std::span<const uint8_t> Pattern)
 {
     uint64_t targetSize;
     RETURN_IF_FAILED(GetFileSize(FileHandle, targetSize));
@@ -401,16 +399,12 @@ HRESULT Utils::OverwriteFileContentsWithPattern(
     if (bytesRemaining > MaxFileBuffer)
     {
         buffer.resize(MaxFileBuffer);
-        RETURN_IF_FAILED(FillBufferWithPattern(buffer,
-                                               Pattern,
-                                               PatternLength));
+        RETURN_IF_FAILED(FillBufferWithPattern(buffer, Pattern));
     }
     else
     {
         buffer.resize(SCAST(size_t)(bytesRemaining));
-        RETURN_IF_FAILED(FillBufferWithPattern(buffer,
-                                               Pattern,
-                                               PatternLength));
+        RETURN_IF_FAILED(FillBufferWithPattern(buffer, Pattern));
     }
 
     while (bytesRemaining > 0)
@@ -418,9 +412,7 @@ HRESULT Utils::OverwriteFileContentsWithPattern(
         if (bytesRemaining < buffer.size())
         {
             buffer.resize(SCAST(size_t)(bytesRemaining));
-            RETURN_IF_FAILED(FillBufferWithPattern(buffer,
-                                                   Pattern,
-                                                   PatternLength));
+            RETURN_IF_FAILED(FillBufferWithPattern(buffer, Pattern));
         }
 
         DWORD bytesWritten = 0;
@@ -442,8 +434,7 @@ _Use_decl_annotations_
 HRESULT Utils::ExtendFileWithPattern(
     handle_t FileHandle,
     uint64_t NewFileSize,
-    const uint8_t* Pattern,
-    size_t PatternLength,
+    std::span<const uint8_t> Pattern,
     uint32_t& AppendedBytes)
 {
     AppendedBytes = 0;
@@ -464,16 +455,12 @@ HRESULT Utils::ExtendFileWithPattern(
     if (bytesRemaining > MaxFileBuffer)
     {
         buffer.resize(MaxFileBuffer);
-        RETURN_IF_FAILED(FillBufferWithPattern(buffer,
-                                               Pattern,
-                                               PatternLength));
+        RETURN_IF_FAILED(FillBufferWithPattern(buffer, Pattern));
     }
     else
     {
         buffer.resize(SCAST(size_t)(bytesRemaining));
-        RETURN_IF_FAILED(FillBufferWithPattern(buffer,
-                                               Pattern,
-                                               PatternLength));
+        RETURN_IF_FAILED(FillBufferWithPattern(buffer, Pattern));
     }
 
     while (bytesRemaining > 0)
@@ -483,9 +470,7 @@ HRESULT Utils::ExtendFileWithPattern(
         if (bytesRemaining < buffer.size())
         {
             buffer.resize(SCAST(size_t)(bytesRemaining));
-            RETURN_IF_FAILED(FillBufferWithPattern(buffer,
-                                                   Pattern,
-                                                   PatternLength));
+            RETURN_IF_FAILED(FillBufferWithPattern(buffer, Pattern));
         }
 
         RETURN_IF_WIN32_BOOL_FALSE(WriteFile(FileHandle,
@@ -507,8 +492,7 @@ _Use_decl_annotations_
 HRESULT Utils::OverwriteFileAfterWithPattern(
     handle_t FileHandle,
     uint64_t FileOffset,
-    const uint8_t* Pattern,
-    size_t PatternLength,
+    std::span<const uint8_t> Pattern,
     uint32_t& WrittenBytes)
 {
     WrittenBytes = 0;
@@ -529,16 +513,12 @@ HRESULT Utils::OverwriteFileAfterWithPattern(
     if (bytesRemaining > MaxFileBuffer)
     {
         buffer.resize(MaxFileBuffer);
-        RETURN_IF_FAILED(FillBufferWithPattern(buffer,
-                                               Pattern,
-                                               PatternLength));
+        RETURN_IF_FAILED(FillBufferWithPattern(buffer, Pattern));
     }
     else
     {
         buffer.resize(SCAST(size_t)(bytesRemaining));
-        RETURN_IF_FAILED(FillBufferWithPattern(buffer,
-                                               Pattern,
-                                               PatternLength));
+        RETURN_IF_FAILED(FillBufferWithPattern(buffer, Pattern));
     }
 
     while (bytesRemaining > 0)
@@ -548,9 +528,7 @@ HRESULT Utils::OverwriteFileAfterWithPattern(
         if (bytesRemaining < buffer.size())
         {
             buffer.resize(SCAST(size_t)(bytesRemaining));
-            RETURN_IF_FAILED(FillBufferWithPattern(buffer,
-                                                   Pattern,
-                                                   PatternLength));
+            RETURN_IF_FAILED(FillBufferWithPattern(buffer, Pattern));
         }
 
         RETURN_IF_WIN32_BOOL_FALSE(WriteFile(FileHandle,

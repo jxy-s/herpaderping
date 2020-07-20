@@ -21,13 +21,10 @@ namespace Herpaderp
     /// </param>
     /// <param name="ReplaceWith">
     /// Optional, if provided the file is replaced with the content of this 
-    /// file. If not produced the file is overwritten with a pattern.
+    /// file. If not provided the file is overwritten with a pattern.
     /// </param>
     /// <param name="Pattern">
     /// Pattern used for obfuscation.
-    /// </param>
-    /// <param name="PatternLength">
-    /// Length of pattern buffer.
     /// </param>
     /// <param name="WaitForProcess">
     /// If true, function waits for the herpaderped process to exit.
@@ -43,8 +40,7 @@ namespace Herpaderp
         _In_ const std::wstring& TargetBinary,
         _In_ const std::wstring& FileName,
         _In_opt_ const std::optional<std::wstring>& ReplaceWith,
-        _In_ const uint8_t* Pattern,
-        _In_ size_t PatternLength,
+        _In_ std::span<const uint8_t> Pattern, 
         _In_ bool WaitForProcess,
         _In_ bool HoldHandleExclusive);
 

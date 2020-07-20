@@ -687,15 +687,53 @@ always question them, and do you research.
 
 The motivation for this research came about when discovering how to do analysis 
 when a file is written. With prior background researching process hollowing and 
-doppelganing. I had theorized this might be possible. The goal is to provide 
+doppelganging. I had theorized this might be possible. The goal is to provide 
 better security. You cannot create a better lock without first understanding 
 how to break the old one.
+
+### Similar Techniques
+Herpaderping is similar to hollowing and doppelganging however there are some 
+key differences:
+
+#### Process Hollowing
+Process hollowing involves modifying the mapped section before execution 
+begins, this involves: `map -> modify section -> execute`. This differs from 
+herpaderping where there is no section modification. This is fairly easily 
+caught by security products by seeing there is a modification to the intended 
+execution path.
+
+#### Process Doppelganging
+Process doppelganging is closer to herpaderping. Doppelganging abuses 
+transacted file operations, this involves: 
+`transact -> write -> map -> rollback -> execute`. 
+In this scenario, the OS will create the image section and account for 
+transactions, so the cached image section is what you wrote to the transaction. 
+The OS has patched this. You may no longer map an image section when a file has 
+an active transaction. This differs from herpaderping in that herpaderping does 
+not rely on transacted file operations.
+
+### Comparison
+For reference, the generalized techniques: 
+| Type          | Technique                                         |
+| :------------ | :------------------------------------------------ |
+| Hollowing     | `map -> modify section -> execute`                |
+| Doppelganging | `transact -> write -> map -> rollback -> execute` |
+| Herpaderping  | `write -> map -> modify -> execute -> close`      |
+
+We can see the differences laid out here. While herpaderping is arguably 
+noisier than doppelganing, in that the malicious bits do hit the disk, we've 
+seen that security products are still incapable of detecting it. And the patch 
+for deppelganging is insufficient for preventing a malicious image section 
+from being mapped. 
+
+## Possible Solution
+There is not a clear fix here. It seems reasonable that preventing an image 
+section from being mapped/cached when there is write access to the file 
+should close the hole. However, that may or may not be a practical solution.
 
 ## Known Affected Platforms
 Below is a list of products and Windows OSes that have been tested as of 
 (7/14/2020). Tests were preformed with a known malicious binary.
-
-
 
 | Operating System                    | Version         | Vulnerable |
 | :---------------------------------- | :-------------- | :--------: |

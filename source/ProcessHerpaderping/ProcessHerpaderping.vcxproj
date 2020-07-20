@@ -113,6 +113,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir);$(SolutionDir)ext\submodules\;$(SolutionDir)ext\submodules\phnt\;$(SolutionDir)ext\submodules\wil\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>pch.hpp</PrecompiledHeaderFile>
       <GenerateXMLDocumentationFiles>true</GenerateXMLDocumentationFiles>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -133,6 +134,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir);$(SolutionDir)ext\submodules\;$(SolutionDir)ext\submodules\phnt\;$(SolutionDir)ext\submodules\wil\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>pch.hpp</PrecompiledHeaderFile>
       <GenerateXMLDocumentationFiles>true</GenerateXMLDocumentationFiles>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

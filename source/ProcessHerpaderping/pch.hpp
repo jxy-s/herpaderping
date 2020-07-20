@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <functional>
 #include <optional>
+#include <span>
 
 //
 // Third Party
