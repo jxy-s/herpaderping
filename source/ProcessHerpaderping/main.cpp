@@ -16,7 +16,7 @@ namespace Constants
         L"Process Herpaderping Tool - Copyright (c) Johnny Shaw" 
     };
 
-    constexpr static std::array<BYTE, 4> Pattern{ '\x72', '\x6f', '\x66', '\x6c' };
+    constexpr static std::array<uint8_t, 4> Pattern{ '\x72', '\x6f', '\x66', '\x6c' };
 
     constexpr static size_t RandPatterLen{ 0x200 };
 }
@@ -254,9 +254,8 @@ int wmain(
     // Herpaderp wants a pattern to use for obfuscation, set that up here.
     //
     HRESULT hr;
+    std::span<const uint8_t> pattern = Constants::Pattern;
     std::vector<uint8_t> patternBuffer;
-    const uint8_t* pattern = Constants::Pattern.data();
-    size_t patternLength = Constants::Pattern.size();
 
     if (params.RandomObfuscation())
     {
@@ -272,15 +271,13 @@ int wmain(
                             L"Failed to generate random buffer");
             return EXIT_FAILURE;
         }
-        pattern = patternBuffer.data();
-        patternLength = patternBuffer.size();
+        pattern = std::span<const uint8_t>(patternBuffer);
     }
 
     hr = Herpaderp::ExecuteProcess(params.TargetBinary(), 
                                    params.FileName(), 
                                    params.ReplaceWith(), 
                                    pattern,
-                                   patternLength,
                                    params.WaitForProcess(),
                                    params.HoldFileExlusive());
     if (FAILED(hr))

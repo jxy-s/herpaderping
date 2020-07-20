@@ -219,17 +219,13 @@ namespace Utils
     /// <param name="Pattern">
     /// Pattern to write into the buffer.
     /// </param>
-    /// <param name="PatternLength">
-    /// Length of the Pattern buffer.
-    /// </param>
     /// <returns>
     /// Success when the buffer is filled with the pattern. Failure if Buffer 
     /// is empty.
     /// </returns>
     _Must_inspect_result_ HRESULT FillBufferWithPattern(
         _Inout_ std::vector<uint8_t>& Buffer,
-        _In_reads_(PatternLength) const uint8_t* Pattern,
-        _In_ size_t PatternLength);
+        _In_ std::span<const uint8_t> Pattern);
 
     /// <summary>
     /// Generates a buffer of random bytes of a given length.
@@ -312,8 +308,7 @@ namespace Utils
     /// </returns>
     _Must_inspect_result_ HRESULT OverwriteFileContentsWithPattern(
         _In_ handle_t FileHandle,
-        _In_reads_(PatternLength) const uint8_t* Pattern,
-        _In_ size_t PatternLength);
+        _In_ std::span<const uint8_t> Pattern);
 
     /// <summary>
     /// Extends file to meet a new size writes a pattern to the extension.
@@ -327,9 +322,6 @@ namespace Utils
     /// <param name="Pattern">
     /// Pattern to use to extend the target file with.
     /// </param>
-    /// <param name="PatternLength">
-    /// Length of PatternBuffer.
-    /// </param>
     /// <param name="AppendedBytes">
     /// Number of bytes appended.
     /// </param>
@@ -339,8 +331,7 @@ namespace Utils
     _Must_inspect_result_ HRESULT ExtendFileWithPattern(
         _In_ handle_t FileHandle,
         _In_ uint64_t NewFileSize,
-        _In_reads_(PatternLength) const uint8_t* Pattern,
-        _In_ size_t PatternLength,
+        _In_ std::span<const uint8_t> Pattern,
         _Out_ uint32_t& AppendedBytes);
 
     /// <summary>
@@ -355,9 +346,6 @@ namespace Utils
     /// <param name="Pattern">
     /// Pattern to use to extend the target file with.
     /// </param>
-    /// <param name="PatternLength">
-    /// Length of PatternBuffer.
-    /// </param>
     /// <param name="WrittenBytes">
     /// Number of bytes written.
     /// </param>
@@ -367,8 +355,7 @@ namespace Utils
     _Must_inspect_result_ HRESULT OverwriteFileAfterWithPattern(
         _In_ handle_t FileHandle,
         _In_ uint64_t FileOffset,
-        _In_reads_(PatternLength) const uint8_t* Pattern,
-        _In_ size_t PatternLength,
+        _In_ std::span<const uint8_t> Pattern,
         _Out_ uint32_t& WrittenBytes);
     
     /// <summary>
