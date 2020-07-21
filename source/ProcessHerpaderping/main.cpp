@@ -29,12 +29,12 @@ class Parameters : public Utils::IArgumentParser
 public:
     constexpr static std::wstring_view Usage
     {
-L"ProcessHerpaderping.exe TargetBinary FileName [ReplacedWith] [Options...]\n"
+L"ProcessHerpaderping.exe SourceFile TargetFile [ReplacedWith] [Options...]\n"
 L"Usage:\n"
-L"  TargetBinary             Target binary to execute.\n"
-L"  FileName                 File name to execute the binary from.\n"
-L"  ReplacedWith             File to replace the binary with. Optional,\n"
-L"                           defaults overwrites the binary with a pattern.\n"
+L"  SourceFile               Source file to execute.\n"
+L"  TargetFile               Target file to execute the source from.\n"
+L"  ReplacedWith             File to replace the target with. Optional,\n"
+L"                           default overwrites the binary with a pattern.\n"
 L"  -h,--help                Prints tool usage.\n"
 L"  -d,--do-not-wait         Does not wait for spawned process to exit,\n"
 L"                           default waits.\n"
@@ -194,7 +194,7 @@ L"                           access and is closed as soon as possible."
     }
 
     /// <summary>Gets the hold handle exclusive boolean.</summary>
-    /// <returns>hold handle exclusive boolean.</returns>
+    /// <returns>Hold handle exclusive boolean.</returns>
     bool HoldFileExlusive() const
     {
         return m_HoldHandleExclusive;

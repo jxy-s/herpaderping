@@ -11,9 +11,9 @@
 
 _Use_decl_annotations_
 HRESULT Herpaderp::ExecuteProcess(
-    const std::wstring& TargetBinary,
-    const std::wstring& FileName,
-    const std::optional<std::wstring>& ReplaceWith,
+    const std::wstring& SourceFileName,
+    const std::wstring& TargetFileName,
+    const std::optional<std::wstring>& ReplaceWithFileName,
     std::span<const uint8_t> Pattern, 
     bool WaitForProcess,
     bool HoldHandleExclusive)
@@ -30,14 +30,14 @@ HRESULT Herpaderp::ExecuteProcess(
         }
     });
 
-    Utils::Log(Log::Success, L"Source Binary: \"%ls\"" , TargetBinary.c_str());
-    Utils::Log(Log::Success, L"Target File:   \"%ls\"", FileName.c_str());
+    Utils::Log(Log::Success, L"Source File: \"%ls\"", SourceFileName.c_str());
+    Utils::Log(Log::Success, L"Target File: \"%ls\"", TargetFileName.c_str());
 
     //
     // Open the source binary and the target file we will execute it from.
     //
     wil::unique_handle sourceHandle;
-    sourceHandle.reset(CreateFileW(TargetBinary.c_str(),
+    sourceHandle.reset(CreateFileW(SourceFileName.c_str(),
                                    GENERIC_READ,
                                    FILE_SHARE_READ | 
                                        FILE_SHARE_WRITE | 
@@ -61,7 +61,7 @@ HRESULT Herpaderp::ExecuteProcess(
     }
 
     wil::unique_handle targetHandle;
-    targetHandle.reset(CreateFileW(FileName.c_str(),
+    targetHandle.reset(CreateFileW(TargetFileName.c_str(),
                                    GENERIC_READ | GENERIC_WRITE,
                                    shareMode,
                                    nullptr,
@@ -164,17 +164,17 @@ HRESULT Herpaderp::ExecuteProcess(
     //   A. Overwrite the target binary with another.
     //   B. Overwrite the target binary with a pattern.
     //
-    if (ReplaceWith.has_value())
+    if (ReplaceWithFileName.has_value())
     {
         //
         // (A) We are overwriting the binary with another file.
         //
         Utils::Log(Log::Success,
                    L"Replacing target with \"%ls\"",
-                   ReplaceWith->c_str());
+                   ReplaceWithFileName->c_str());
 
         wil::unique_handle replaceWithHandle;
-        replaceWithHandle.reset(CreateFileW(ReplaceWith->c_str(),
+        replaceWithHandle.reset(CreateFileW(ReplaceWithFileName->c_str(),
                                             GENERIC_READ,
                                             FILE_SHARE_READ |
                                                 FILE_SHARE_WRITE |
@@ -307,7 +307,7 @@ HRESULT Herpaderp::ExecuteProcess(
                remotePebProcessParams);
 
     hr = Utils::WriteRemoteProcessParameters(processHandle.get(),
-                                             FileName.c_str(),
+                                             TargetFileName.c_str(),
                                              remotePebProcessParams);
     if (FAILED(hr))
     {
@@ -358,8 +358,8 @@ HRESULT Herpaderp::ExecuteProcess(
     if (!HoldHandleExclusive)
     {
         //
-        // We're done with the target file handle. At this point the process create
-        // callback will have fired in the kernel.
+        // We're done with the target file handle. At this point the process 
+        // create callback will have fired in the kernel.
         //
         targetHandle.reset();
     }
