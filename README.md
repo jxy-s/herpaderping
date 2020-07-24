@@ -22,23 +22,23 @@ creation callback would see the modified content. Additionally, some products
 use an on-write scanning approach which consists of monitoring for file writes. 
 A familiar optimization here is recording the file has been written to and 
 defer the actual inspection until [IRP_MJ_CLEANUP][msdn.IRP_MJ_CLEANUP] 
-occurs (e.g. the file handle is closed). An actor taking these steps: 
-`write -> map -> modify -> execute -> close`. Will subvert on-write scanning 
+occurs (e.g. the file handle is closed). Thus, an actor using a 
+`write -> map -> modify -> execute -> close` workflow will subvert on-write scanning 
 that solely relies on inspection at [IRP_MJ_CLEANUP][msdn.IRP_MJ_CLEANUP].
 
-To abuse this convention. We first write a binary to a target file on disk. 
-Then, map then image of the target file and provide this to the OS to use for 
-process creation. The OS kindly maps the original binary for us. Then, using 
-the existing file handle and before creating the initial thread, we modify the 
-target file content to obscure or fake the file backing the image. After this, 
-we create the initial thread to begin execution of the original binary. Then 
-later, close the target file handle. Let walk through this step-by-step:
+To abuse this convention, we first write a binary to a target file on disk. 
+Then, we map an image of the target file and provide it to the OS to use for 
+process creation. The OS kindly maps the original binary for us. Using 
+the existing file handle, and before creating the initial thread, we modify the 
+target file content to obscure or fake the file backing the image. Some time later, 
+we create the initial thread to begin execution of the original binary. Finally, we 
+ will close the target file handle. Let's walk through this step-by-step:
 1. Write target binary to disk, keeping the handle open. This is what will 
    execute in memory.
 2. Map the file as an image section ([NtCreateSection][msdn.NtCreateSection], 
    [SEC_IMAGE][msdn.SEC_IMAGE]).
 3. Create the process object using the section handle (`NtCreateProcessEx`).
-4. Using the same target file handle. Obscure the file on disk.
+4. Using the same target file handle, obscure the file on disk.
 5. Create the initial thread in the process (`NtCreateThreadEx`).
     - At this point the process creation callback in the kernel will fire. The 
       contents on disk do not match what was mapped. Inspection of the file at 
@@ -49,8 +49,8 @@ later, close the target file handle. Let walk through this step-by-step:
 
 ## Behavior
 You'll see in the demo below, `CMD.exe` is used as the execution target. The 
-first run overwrites the bytes on disk with a pattern. The second run `CMD.exe` 
-is overwritten with `ProcessHacker.exe`, the tool fixes up the binary to look 
+first run overwrites the bytes on disk with a pattern. The second run overwrites `CMD.exe` 
+with `ProcessHacker.exe`. The Herpaderping tool fixes up the binary to look 
 as close to `ProcessHacker.exe` as possible, even retaining the original 
 signature. Note the multiple executions of the same binary and how the process 
 looks to the user compared to what is in the file on disk.
@@ -67,7 +67,7 @@ explain this behavior.
 Let's try to understand why the process successfully executes multiple times 
 despite the bits on disk not being `CMD.exe`. Below is some `WinDbg` output. 
 I've executed the tool as in the demo above, the first herpaderped process was 
-created, then I started another, let's compare:
+created, then I started another. Let's compare:
 
 ```
 PROCESS ffff998aab671080
@@ -115,10 +115,10 @@ Object: ffff998aadf2dde0  Type: (ffff998aa54d3820) File
 ```
 
 Note the two processes. I've dumped the relevant parts of the `EPROCESS` for 
-each. They have different section object, as expected, they need their own 
+each. They have different section objects, as expected, as they need their own 
 sections since they are independent processes.
 
-The first process' `ImageFilePointer` is null since the tool calls 
+The first process' `ImageFilePointer` is null, since the tool calls 
 `NtCreateProcessEx` and explicitly hands the OS a section to use. We'll circle 
 back around to this later. For now, let's take a closer look at the 
 [FILE_OBJECT][msdn.FILE_OBJECT]: 
@@ -159,8 +159,8 @@ back around to this later. For now, let's take a closer look at the
 
 First, that file object looks different than what we had originally opened with. 
 This is expected since executing the process normally (as the user would, by 
-double clicking it) will result `explorer.exe` calling `NtCreateUserProcess`. 
-This kind of helps explain the behavior we see. But if it were using the file 
+double clicking it) will cause `explorer.exe` to invoke `NtCreateUserProcess`. 
+That somewhat explains the behavior we see. But if it was using the file, 
 why did it execute `CMD.exe`? We've overwritten it.
 
 Its behavior seems like the section is being reused. Let's verify this 
@@ -268,7 +268,7 @@ be reused. This would ignore the data on disk and helps explain the behavior
 we're seeing with multiple executions. This is a smart optimization, if you've 
 already done the work to parse and map the image, why duplicate that work?
 
-With a bit of reverse engineering of `MiReferenceControlArea` we can see this:
+With a bit of reverse engineering of `MiReferenceControlArea` we notice:
 
 ```cpp
 struct CREATE_SECTION_PACKET
@@ -426,17 +426,17 @@ Exit:
 }
 ```
 
-The above shows that this path will reference the input file object. And 
-attempt to re-use the section from the control area to create a new section 
+The above code shows that this path will reference the input file object and  
+attempt to reuse the section from the control area to create a new section 
 based on it. In our example, this returns to `MiCreateSection` which does some 
 finalization.
 
 Let's go back to the debugger now and identify that file object. From my 
-reverse engineering I know that `CREATE_SECTION_PACKET` is stored on the 
+reverse engineering, I know that `CREATE_SECTION_PACKET` is stored on the 
 stack from a higher call. I'll go identify that.
 
 This is the structure `CREATE_SECTION_PACKET` in the stack starting at 
-`InputFileHandle` and ending at `FileObject` between these fields there exists 
+`InputFileHandle` and ending at `FileObject`. Between these fields there exists 
 `InputFileObject`:
 ```
 0: kd> dq fffffd89`f016b868 L3
@@ -444,7 +444,7 @@ fffffd89`f016b868  00000000`0000255c 00000000`00000000
 fffffd89`f016b878  ffff998a`ae91ea20
 ```
 
-The input file object is null. This is expected in this path. And the 
+The input file object is null, which is expected in this path. And the 
 `InputFileHandle` is a handle to an almost identical  
 [FILE_OBJECT][msdn.FILE_OBJECT] from the `EPROCESS` of the previous process. 
 But it isn't the same. However, the `SectionObjectPointer` is the same for both 
@@ -665,19 +665,19 @@ CreateInfo: FFFFFD89F1B1DE20
 
 I control this file access now. Meaning, I may hold this handle open and 
 prevent others from accessing the file. While this isn't horrible for the 
-kernel callback. It means any downstream logic that that makes the assumption 
-they can open the file with read access, will be broken. Well, it would have 
-already been given I've overwritten the file content. And the kernel callback 
+kernel callback, it means any downstream logic that that makes the assumption 
+they can open the file with read access will be broken. Well, such logic would have 
+already been broken, given that I've overwritten the file content. And the kernel callback 
 is boned too, since reading directly from the file using that 
-[FILE_OBJECT][msdn.FILE_OBJECT] will just read up the wrong data.
+[FILE_OBJECT][msdn.FILE_OBJECT] will just read the wrong data.
 
 ##### But wait, there's more...
-This also means if I try to execute that process again. It does not work; I get 
+This also means if I try to execute that process again, it does not work! I get 
 a sharing violation. From user mode, without access to that original target 
 file handle, no one may conventionally execute the process.
 
 ## Background and Motivation
-When designing products for securing Windows platforms. Many engineers in 
+When designing products for securing Windows platforms, many engineers in 
 this field (myself included) have fallen on preconceived notions with respect 
 to how the OS will handle data. In this scenario, some might expect the file on 
 disk to remain "locked" when the process is created. You can't delete the file. 
@@ -687,7 +687,7 @@ always question them, and do you research.
 
 The motivation for this research came about when discovering how to do analysis 
 when a file is written. With prior background researching process hollowing and 
-doppelganging. I had theorized this might be possible. The goal is to provide 
+doppelganging, I had theorized this might be possible. The goal is to provide 
 better security. You cannot create a better lock without first understanding 
 how to break the old one.
 
@@ -697,20 +697,20 @@ key differences:
 
 #### Process Hollowing
 Process hollowing involves modifying the mapped section before execution 
-begins, abstractly this looks like: `map -> modify section -> execute`. This 
+begins, which abstractly this looks like: `map -> modify section -> execute`. This workflow 
 results in the intended execution flow of the hollowed process diverging into 
 unintended code. Doppelganging might be considered a form of hollowing. 
-However, hollowing, in my opinion, is closer to injection. In that hollowing 
+However, hollowing, in my opinion, is closer to injection in that hollowing 
 usually involves an explicit write to the already mapped code. This differs 
 from herpaderping where there are no modified sections.
 
 #### Process Doppelganging
 Process doppelganging is closer to herpaderping. Doppelganging abuses 
-transacted file operations, this generally involves these steps: 
+transacted file operations and generally involves these steps: 
 `transact -> write -> map -> rollback -> execute`. 
-In this scenario, the OS will create the image section and account for 
+In this workflow, the OS will create the image section and account for 
 transactions, so the cached image section ends up being what you wrote to the 
-transaction. The OS has patched this. Well, they patched the crash this caused. 
+transaction. The OS has patched this technique. Well, they patched the crash it caused. 
 Maybe they consider this a "legal" use of a transaction. Thankfully, Windows 
 Defender does catch the doppelganging technique. Doppelganging differs from 
 herpaderping in that herpaderping does not rely on transacted file operations. 
