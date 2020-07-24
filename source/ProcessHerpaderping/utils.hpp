@@ -204,7 +204,10 @@ namespace Utils
     /// <param name="...">
     /// Variadic arguments for formatting.
     /// </param>
-    void Log(
+    /// <returns>
+    /// Supplied Error
+    /// </returns>
+    uint32_t Log(
         _In_ uint32_t Level, 
         _In_ uint32_t Error, 
         _Printf_format_string_ const wchar_t* Format, 
