@@ -351,3 +351,6 @@ MigrationBackup/
 
 # Build output directory
 build/
+
+# vscode
+.vscode/

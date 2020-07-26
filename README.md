@@ -14,8 +14,6 @@ the executable and determine if this process should be allowed to execute. This
 kernel callback is invoked when the initial thread is inserted, not when the 
 process object is created. 
 
-![][pic.PspCallProcessNotifyRoutinesXrefs]
-
 Because of this, an actor can create and map a process, modify the content of 
 the file, then create the initial thread. A product that does inspection at the 
 creation callback would see the modified content. Additionally, some products 
@@ -58,6 +56,8 @@ looks to the user compared to what is in the file on disk.
 ![][gif.ProcessHerpaderp]
 
 ### Diving Deeper
+<details> <!--- Collapsible "Diving Deeper" section --->
+    <summary>click to expand this section</summary>
 
 We've observed the behavior and some of this may be surprising. Let's try to 
 explain this behavior.
@@ -68,6 +68,9 @@ Let's try to understand why the process successfully executes multiple times
 despite the bits on disk not being `CMD.exe`. Below is some `WinDbg` output. 
 I've executed the tool as in the demo above, the first herpaderped process was 
 created, then I started another. Let's compare:
+
+<details>
+    <summary>windbg output</summary>
 
 ```
 PROCESS ffff998aab671080
@@ -113,15 +116,17 @@ Object: ffff998aadf2dde0  Type: (ffff998aa54d3820) File
     HandleCount: 0  PointerCount: 1
     Directory Object: 00000000  Name: \Users\jxy\Desktop\lol.exe {HarddiskVolume3}
 ```
+</details>
 
 Note the two processes. I've dumped the relevant parts of the `EPROCESS` for 
 each. They have different section objects, as expected, as they need their own 
-sections since they are independent processes.
+sections since they are independent processes. The first process' 
+`ImageFilePointer` is null, since the tool calls `NtCreateProcessEx` and 
+explicitly hands the OS a section to use. We'll circle back around to this 
+later. For now, let's take a closer look at the [FILE_OBJECT][msdn.FILE_OBJECT]: 
 
-The first process' `ImageFilePointer` is null, since the tool calls 
-`NtCreateProcessEx` and explicitly hands the OS a section to use. We'll circle 
-back around to this later. For now, let's take a closer look at the 
-[FILE_OBJECT][msdn.FILE_OBJECT]: 
+<details>
+    <summary>windbg output</summary>
 
 ```
 0: kd> dt nt!_FILE_OBJECT 0xffff998a`adf2dde0
@@ -156,18 +161,16 @@ back around to this later. For now, let's take a closer look at the
    +0x0c0 IrpList          : _LIST_ENTRY [ 0xffff998a`adf2dea0 - 0xffff998a`adf2dea0 ]
    +0x0d0 FileObjectExtension : (null) 
 ```
+</details>
 
 First, that file object looks different than what we had originally opened with. 
 This is expected since executing the process normally (as the user would, by 
 double clicking it) will cause `explorer.exe` to invoke `NtCreateUserProcess`. 
 That somewhat explains the behavior we see. But if it was using the file, 
-why did it execute `CMD.exe`? We've overwritten it.
-
-Its behavior seems like the section is being reused. Let's verify this 
-assumption.
-
-The file object stores [SECTION_OBJECT_POINTERS][msdn.SECTION_OBJECT_POINTERS] 
-at `SectionObjectPointer`. Let's look there. 
+why did it execute `CMD.exe`? We've overwritten it. Its behavior seems like the 
+section is being reused. Let's verify this assumption. The file object stores 
+[SECTION_OBJECT_POINTERS][msdn.SECTION_OBJECT_POINTERS] at 
+`SectionObjectPointer`. Let's look there. 
 
 ```
 0: kd> dx -id 0,0,ffff998aa547b2c0 -r1 ((ntkrnlmp!_SECTION_OBJECT_POINTERS *)0xffff998aae08aae8)
@@ -181,6 +184,9 @@ According to the documentation the
 `DataSectionObject` and `ImageSectionObject` are `CONTROL_AREA` structures. And 
 `SharedCacheMap` is `SHARED_CACHE_MAP`. Let's set a breakpoint and see where 
 `ImageSectionObject` is accessed. I'll run another instance of `lol.exe`. 
+
+<details>
+    <summary>windbg output</summary>
 
 ```
 ba r8 0xffff998aae08aae8+0x108
@@ -259,6 +265,7 @@ fffff802`2f4955e1 408af8          mov     dil,al
 0a 000000a1`98f7e530 00007ffb`dd34ba78 SHELL32!SHPrivateExtractIcons+0x1ec
 0b 000000a1`98f7ea30 00007ff7`70a856ee SHELL32!ExtractIconExW+0xe8
 ```
+</details>
 
 As we see, after I double click to start `lol.exe` again, the 
 `ImageSectionObject` is accessed from 
@@ -269,6 +276,9 @@ we're seeing with multiple executions. This is a smart optimization, if you've
 already done the work to parse and map the image, why duplicate that work?
 
 With a bit of reverse engineering of `MiReferenceControlArea` we notice:
+
+<details>
+    <summary>reversed code</summary>
 
 ```cpp
 struct CREATE_SECTION_PACKET
@@ -425,15 +435,14 @@ Exit:
     return status;
 }
 ```
+</details>
 
-The above code shows that this path will reference the input file object and  
+The above code shows that this path will reference the input file object and 
 attempt to reuse the section from the control area to create a new section 
 based on it. In our example, this returns to `MiCreateSection` which does some 
-finalization.
-
-Let's go back to the debugger now and identify that file object. From my 
-reverse engineering, I know that `CREATE_SECTION_PACKET` is stored on the 
-stack from a higher call. I'll go identify that.
+finalization. Let's go back to the debugger now and identify that file object. 
+From my reverse engineering, I know that `CREATE_SECTION_PACKET` is stored on 
+the stack from a higher call. I'll go identify that.
 
 This is the structure `CREATE_SECTION_PACKET` in the stack starting at 
 `InputFileHandle` and ending at `FileObject`. Between these fields there exists 
@@ -449,6 +458,9 @@ The input file object is null, which is expected in this path. And the
 [FILE_OBJECT][msdn.FILE_OBJECT] from the `EPROCESS` of the previous process. 
 But it isn't the same. However, the `SectionObjectPointer` is the same for both 
 objects.
+
+<details>
+    <summary>windbg output</summary>
 
 ```
 0: kd> !handle 00000000`0000255c
@@ -503,13 +515,16 @@ Object: ffff998aae91ea20  Type: (ffff998aa54d3820) File
    +0x0c0 IrpList          : _LIST_ENTRY [ 0xffff998a`ae91eae0 - 0xffff998a`ae91eae0 ]
    +0x0d0 FileObjectExtension : (null) 
 ```
+</details>
 
 We now see how the [SECTION_OBJECT_POINTERS][msdn.SECTION_OBJECT_POINTERS] are 
-shared between each [FILE_OBJECT][msdn.FILE_OBJECT].
-
-The new bits from the file don't ever become mapped for a new process until 
-all the [FILE_OBJECT][msdn.FILE_OBJECT] are reclaimed with the shared 
+shared between each [FILE_OBJECT][msdn.FILE_OBJECT]. The new bits from the file 
+don't ever become mapped for a new process until all the 
+[FILE_OBJECT][msdn.FILE_OBJECT] are reclaimed with the shared 
 `SectionObjectPointer` and `ImageSectionObject`.
+
+<details>
+    <summary>windbg output</summary>
 
 ```
 Breakpoint 0 hit
@@ -531,6 +546,7 @@ fffff802`2f4f9385 ebe2            jmp     nt!MiClearFilePointer+0x41 (fffff802`2
 0b fffffd89`f254fb00 00007ffb`de0fc5f4 nt!KiSystemServiceCopyEnd+0x25
 0c 00000025`020ff718 00000000`00000000 ntdll!NtTerminateProcess+0x14
 ```
+</details>
 
 #### What this means for the process creation callback 
 
@@ -539,6 +555,9 @@ which according to the documentation, is the file object of the process being
 created. How does [PS_CREATE_NOTIFY_INFO][msdn.PS_CREATE_NOTIFY_INFO] in the 
 process creation callback get populated? Well `PspCallProcessNotifyRoutines` 
 calls `PsReferenceProcessFilePointer` of course:
+
+<details>
+    <summary>reversed code</summary>
 
 ```cpp
 NTSTATUS __fastcall PsReferenceProcessFilePointer(
@@ -565,12 +584,14 @@ NTSTATUS __fastcall PsReferenceProcessFilePointer(
     return status;
 }
 ```
+</details>
 
 We see here it gets the `FileObject` from the `SectionObject` field in the 
-`EPROCESS`.
+`EPROCESS`. What does this mean for the callback? I wrote a simple test driver 
+that registers for the callback and prints some debug info.
 
-What does this mean for the callback? I wrote a simple test driver that 
-registers for the callback and prints some debug info.
+<details>
+    <summary>windbg output</summary>
 
 ```
 Process:    FFFF998AAC8DF080
@@ -615,10 +636,14 @@ CreateInfo: FFFFFD89F16F8E20
    +0x0c0 IrpList          : _LIST_ENTRY [ 0xffff998a`b534db60 - 0xffff998a`b534db60 ]
    +0x0d0 FileObjectExtension : (null) 
 ```
+</details>
 
 That's the same access that I opened the file with to create the section. Let's 
 try something. Let's run `ProcessHerpaderping` with the `--exclusive` option. 
 This will hold the initial file handle open with exclusive rights.
+
+<details>
+    <summary>windbg output</summary>
 
 ```
 Process:    FFFF998AB2BD5080
@@ -662,6 +687,7 @@ CreateInfo: FFFFFD89F1B1DE20
    +0x0c0 IrpList          : _LIST_ENTRY [ 0xffff998a`b21a63f0 - 0xffff998a`b21a63f0 ]
    +0x0d0 FileObjectExtension : (null) 
 ```
+</details>
 
 I control this file access now. Meaning, I may hold this handle open and 
 prevent others from accessing the file. While this isn't horrible for the 
@@ -675,6 +701,8 @@ is boned too, since reading directly from the file using that
 This also means if I try to execute that process again, it does not work! I get 
 a sharing violation. From user mode, without access to that original target 
 file handle, no one may conventionally execute the process.
+
+</details> <!--- End of collapsible "Diving Deeper" section.  --->
 
 ## Background and Motivation
 When designing products for securing Windows platforms, many engineers in 
@@ -716,7 +744,7 @@ Defender does catch the doppelganging technique. Doppelganging differs from
 herpaderping in that herpaderping does not rely on transacted file operations. 
 And Defender doesn't catch herpaderping.
 
-### Comparison
+#### Comparison
 For reference, the generalized techniques: 
 | Type          | Technique                                         |
 | :------------ | :------------------------------------------------ |
@@ -818,5 +846,4 @@ symbol files, as well as a lot of reverse engineering and guessing.
 
 [//]: # (Relative Path IDs)
 [gif.ProcessHerpaderp]: res/ProcessHerpaderp.gif
-[pic.PspCallProcessNotifyRoutinesXrefs]: res/PspCallProcessNotifyRoutinesXrefs.png
 [gif.SurivDemo]: res/SurivDemo.gif
