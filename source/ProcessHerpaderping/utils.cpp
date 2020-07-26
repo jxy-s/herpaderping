@@ -231,7 +231,7 @@ void Utils::Log(
 }
 
 _Use_decl_annotations_
-void Utils::Log(
+uint32_t Utils::Log(
     uint32_t Level, 
     uint32_t Error, 
     const wchar_t* Format, 
@@ -241,6 +241,7 @@ void Utils::Log(
     va_start(args, Format);
     LogInternal(true, Error, Level, Format, args);
     va_end(args);
+    return Error;
 }
 
 _Use_decl_annotations_

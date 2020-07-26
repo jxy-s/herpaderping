@@ -48,8 +48,9 @@ HRESULT Herpaderp::ExecuteProcess(
                                    nullptr));
     if (!sourceHandle.is_valid())
     {
-        Utils::Log(Log::Error, GetLastError(), L"Failed to open source file");
-        RETURN_LAST_ERROR();
+        RETURN_LAST_ERROR_SET(Utils::Log(Log::Error, 
+                                         GetLastError(), 
+                                         L"Failed to open source file"));
     }
 
     DWORD shareMode = (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE);
@@ -70,10 +71,9 @@ HRESULT Herpaderp::ExecuteProcess(
                                    nullptr));
     if(!targetHandle.is_valid())
     {
-        Utils::Log(Log::Error, 
-                   GetLastError(), 
-                   L"Failed to create target file");
-        RETURN_LAST_ERROR();
+        RETURN_LAST_ERROR_SET(Utils::Log(Log::Error, 
+                                         GetLastError(), 
+                                         L"Failed to create target file"));
     }
 
     //
@@ -110,8 +110,10 @@ HRESULT Herpaderp::ExecuteProcess(
     if (!NT_SUCCESS(status))
     {
         sectionHandle.release();
-        Utils::Log(Log::Error, status, L"Failed to create target file image section");
-        RETURN_NTSTATUS(status);
+        RETURN_NTSTATUS(Utils::Log(
+                              Log::Error, 
+                              status, 
+                              L"Failed to create target file image section"));
     }
 
     Utils::Log(Log::Information, L"Created image section for target");
@@ -128,8 +130,9 @@ HRESULT Herpaderp::ExecuteProcess(
     if (!NT_SUCCESS(status))
     {
         processHandle.release();
-        Utils::Log(Log::Error, status, L"Failed to create process");
-        RETURN_NTSTATUS(status);
+        RETURN_NTSTATUS(Utils::Log(Log::Error, 
+                                   status, 
+                                   L"Failed to create process"));
     }
 
     Utils::Log(Log::Information,
@@ -186,10 +189,10 @@ HRESULT Herpaderp::ExecuteProcess(
 
         if (!replaceWithHandle.is_valid())
         {
-            Utils::Log(Log::Error, 
-                       GetLastError(), 
-                       L"Failed to open replace with file");
-            RETURN_LAST_ERROR();
+            RETURN_LAST_ERROR_SET(Utils::Log(
+                                        Log::Error, 
+                                        GetLastError(), 
+                                        L"Failed to open replace with file"));
         }
 
         //
@@ -263,7 +266,9 @@ HRESULT Herpaderp::ExecuteProcess(
                                                      Pattern);
         if (FAILED(hr))
         {
-            Utils::Log(Log::Error, hr, L"Failed to write pattern over file");
+            Utils::Log(Log::Error, 
+                       hr, 
+                       L"Failed to write pattern over file");
             RETURN_HR(hr);
         }
     }
@@ -282,8 +287,9 @@ HRESULT Herpaderp::ExecuteProcess(
                                        nullptr);
     if (!NT_SUCCESS(status))
     {
-        Utils::Log(Log::Error, status, L"Failed to query new process info");
-        RETURN_NTSTATUS(status);
+        RETURN_NTSTATUS(Utils::Log(Log::Error, 
+                                   status, 
+                                   L"Failed to query new process info"));
     }
 
     PEB peb{};
@@ -293,10 +299,9 @@ HRESULT Herpaderp::ExecuteProcess(
                            sizeof(peb),
                            nullptr))
     {
-        Utils::Log(Log::Error, 
-                   GetLastError(), 
-                   L"Failed to read remote process PEB");
-        RETURN_LAST_ERROR();
+        RETURN_LAST_ERROR_SET(Utils::Log(Log::Error, 
+                                         GetLastError(), 
+                                         L"Failed to read remote process PEB"));
     }
 
     void* remotePebProcessParams = Add2Ptr(pbi.PebBaseAddress,
@@ -342,8 +347,9 @@ HRESULT Herpaderp::ExecuteProcess(
     if (!NT_SUCCESS(status))
     {
         threadHandle.release();
-        Utils::Log(Log::Error, status, L"Failed to create remote thread");
-        RETURN_NTSTATUS(status);
+        RETURN_NTSTATUS(Utils::Log(Log::Error, 
+                                   status, 
+                                   L"Failed to create remote thread"));
     }
 
     Utils::Log(Log::Information,
