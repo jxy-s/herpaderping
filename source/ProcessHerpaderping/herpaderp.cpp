@@ -16,7 +16,8 @@ HRESULT Herpaderp::ExecuteProcess(
     const std::optional<std::wstring>& ReplaceWithFileName,
     std::span<const uint8_t> Pattern, 
     bool WaitForProcess,
-    bool HoldHandleExclusive)
+    bool HoldHandleExclusive,
+    bool FlushFile)
 {
     wil::unique_handle processHandle;
     //
@@ -199,7 +200,8 @@ HRESULT Herpaderp::ExecuteProcess(
         // Replace the bytes. We handle a failure here. We'll fix it up after.
         //
         hr = Utils::CopyFileByHandle(replaceWithHandle.get(),
-                                     targetHandle.get());
+                                     targetHandle.get(),
+                                     FlushFile);
         if (FAILED(hr))
         {
             if (hr != HRESULT_FROM_WIN32(ERROR_USER_MAPPED_FILE))
@@ -235,7 +237,8 @@ HRESULT Herpaderp::ExecuteProcess(
             hr = Utils::OverwriteFileAfterWithPattern(targetHandle.get(),
                                                       replaceWithSize,
                                                       Pattern,
-                                                      bytesWritten);
+                                                      bytesWritten,
+                                                      FlushFile);
             if (FAILED(hr))
             {
                 Utils::Log(Log::Warning, 
@@ -245,7 +248,8 @@ HRESULT Herpaderp::ExecuteProcess(
             else
             {
                 hr = Utils::ExtendFileSecurityDirectory(targetHandle.get(),
-                                                        bytesWritten);
+                                                        bytesWritten,
+                                                        FlushFile);
                 if (FAILED(hr))
                 {
                     Utils::Log(Log::Warning,
@@ -263,7 +267,8 @@ HRESULT Herpaderp::ExecuteProcess(
         Utils::Log(Log::Success, L"Overwriting target with pattern");
 
         hr = Utils::OverwriteFileContentsWithPattern(targetHandle.get(),
-                                                     Pattern);
+                                                     Pattern,
+                                                     FlushFile);
         if (FAILED(hr))
         {
             Utils::Log(Log::Error, 

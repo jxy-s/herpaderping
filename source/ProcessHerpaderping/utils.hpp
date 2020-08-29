@@ -287,12 +287,16 @@ namespace Utils
     /// <param name="TargetHandle">
     /// Target file handle.
     /// </param>
+    /// <param name="FlushFile">
+    /// Flushes file buffers after copy, optional, defaults to true.
+    /// </param>
     /// <returns>
     /// Success if the source file has been copied to the target.
     /// </returns>
     _Must_inspect_result_ HRESULT CopyFileByHandle(
         _In_ handle_t SourceHandle, 
-        _In_ handle_t TargetHandle);
+        _In_ handle_t TargetHandle,
+        _In_ bool FlushFile = true);
 
     /// <summary>
     /// Overwrites the contents of a file with a pattern.
@@ -306,12 +310,16 @@ namespace Utils
     /// <param name="PatternLength">
     /// Length of Pattern buffer.
     /// </param>
+    /// <param name="FlushFile">
+    /// Flushes file buffers after overwrite, optional, defaults to true.
+    /// </param>
     /// <returns>
     /// Success if the file content was overwritten.
     /// </returns>
     _Must_inspect_result_ HRESULT OverwriteFileContentsWithPattern(
         _In_ handle_t FileHandle,
-        _In_ std::span<const uint8_t> Pattern);
+        _In_ std::span<const uint8_t> Pattern,
+        _In_ bool FlushFile = true);
 
     /// <summary>
     /// Extends file to meet a new size writes a pattern to the extension.
@@ -328,6 +336,9 @@ namespace Utils
     /// <param name="AppendedBytes">
     /// Number of bytes appended.
     /// </param>
+    /// <param name="FlushFile">
+    /// Flushes file buffers after extension, optional, defaults to true.
+    /// </param>
     /// <returns>
     /// Success if the file was extended.
     /// </returns>
@@ -335,7 +346,8 @@ namespace Utils
         _In_ handle_t FileHandle,
         _In_ uint64_t NewFileSize,
         _In_ std::span<const uint8_t> Pattern,
-        _Out_ uint32_t& AppendedBytes);
+        _Out_ uint32_t& AppendedBytes,
+        _In_ bool FlushFile = true);
 
     /// <summary>
     /// Overwrites a file from a given offset with a pattern.
@@ -352,6 +364,9 @@ namespace Utils
     /// <param name="WrittenBytes">
     /// Number of bytes written.
     /// </param>
+    /// <param name="FlushFile">
+    /// Flushes file buffers after overwrite, optional, defaults to true.
+    /// </param>
     /// <returns>
     /// Success if the file was overwritten.
     /// </returns>
@@ -359,7 +374,8 @@ namespace Utils
         _In_ handle_t FileHandle,
         _In_ uint64_t FileOffset,
         _In_ std::span<const uint8_t> Pattern,
-        _Out_ uint32_t& WrittenBytes);
+        _Out_ uint32_t& WrittenBytes,
+        _In_ bool FlushFile = true);
     
     /// <summary>
     /// Extends a PE file security directory by a number of bytes.
@@ -370,13 +386,17 @@ namespace Utils
     /// <param name="ExtendedBy">
     /// Number of bytes to extend the security directory by.
     /// </param>
+    /// <param name="FlushFile">
+    /// Flushes file buffers after extension, optional, defaults to true.
+    /// </param>
     /// <returns>
     /// Success if the security directory was extended. Failure if the file is 
     /// not a PE file or does not have a security directory.
     /// </returns>
     _Must_inspect_result_ HRESULT ExtendFileSecurityDirectory(
         _In_ handle_t FileHandle,
-        _In_ uint32_t ExtendedBy);
+        _In_ uint32_t ExtendedBy,
+        _In_ bool FlushFile = true);
 
     /// <summary>
     /// Retrieves the image entry point RVA from a file.

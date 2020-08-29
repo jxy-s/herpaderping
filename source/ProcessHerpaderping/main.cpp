@@ -51,7 +51,8 @@ L"                           file obfuscation.\n"
 L"  -e,--exclusive           Target file is created with exclusive access and\n"
 L"                           the handle is held open as long as possible.\n"
 L"                           Without this option the handle has full share\n"
-L"                           access and is closed as soon as possible."
+L"                           access and is closed as soon as possible.\n"
+L"  -u,--do-not-flush-file   Does not flush file after overwrite.\n"
     };
 
     Parameters() = default;
@@ -127,6 +128,11 @@ L"                           access and is closed as soon as possible."
                 m_HoldHandleExclusive = true;
                 continue;
             }
+            if (SUCCEEDED(Utils::MatchParameter(arg, L"u", L"do-not-flush-file")))
+            {
+                m_FlushFile = false;
+                continue;
+            }
 
             //
             // Assume replace with target.
@@ -199,6 +205,13 @@ L"                           access and is closed as soon as possible."
     {
         return m_HoldHandleExclusive;
     }
+
+    /// <summary>Gets flush file boolean.</summary> 
+    /// <returns>Flush file boolean.</returns> 
+    bool FlushFile() const
+    {
+        return m_FlushFile;
+    }
     
 private:
 
@@ -210,6 +223,7 @@ private:
     bool m_Quiet{ false };
     bool m_RandomObfuscation{ false };
     bool m_HoldHandleExclusive{ false };
+    bool m_FlushFile{ true };
 };
 
 /// <summary>
@@ -279,7 +293,8 @@ int wmain(
                                    params.ReplaceWith(), 
                                    pattern,
                                    params.WaitForProcess(),
-                                   params.HoldFileExlusive());
+                                   params.HoldFileExlusive(),
+                                   params.FlushFile());
     if (FAILED(hr))
     {
         Utils::Log(Log::Error, hr, L"Process Herpaderp Failed");

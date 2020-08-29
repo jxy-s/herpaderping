@@ -55,6 +55,8 @@ looks to the user compared to what is in the file on disk.
 
 ![][gif.ProcessHerpaderp]
 
+![][png.procmon]
+
 ### Diving Deeper
 <details> <!--- Collapsible "Diving Deeper" section --->
     <summary>click to expand this section</summary>
@@ -847,3 +849,4 @@ symbol files, as well as a lot of reverse engineering and guessing.
 [//]: # (Relative Path IDs)
 [gif.ProcessHerpaderp]: res/ProcessHerpaderp.gif
 [gif.SurivDemo]: res/SurivDemo.gif
+[png.procmon]: res/procmon.png

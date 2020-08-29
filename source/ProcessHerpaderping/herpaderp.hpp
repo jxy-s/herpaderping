@@ -33,6 +33,9 @@ namespace Herpaderp
     /// If true, the function creates the target file with exclusive access 
     /// and holds the handle open longer.
     /// </param>
+    /// <param name="FlushFile">
+    /// Flushes file after overwrite if true, if false the file is not flushed.
+    /// </param>
     /// <returns>
     /// Success if the herpaderping executed. Failure otherwise.
     /// </returns>
@@ -42,6 +45,7 @@ namespace Herpaderp
         _In_opt_ const std::optional<std::wstring>& ReplaceWithFileName,
         _In_ std::span<const uint8_t> Pattern, 
         _In_ bool WaitForProcess,
-        _In_ bool HoldHandleExclusive);
+        _In_ bool HoldHandleExclusive,
+        _In_ bool FlushFile);
 
 }
