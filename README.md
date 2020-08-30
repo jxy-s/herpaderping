@@ -784,6 +784,27 @@ Below is a list of products and Windows OSes that have been tested as of
 | Windows Defender Antivirus          | 1.319.1676.0  | Yes        |
 | Windows Defender Antispyware        | 1.319.1676.0  | Yes        |
 
+## Responsible Disclosure
+This vulnerability was disclosed to the Microsoft Security Response Center 
+(MSRC) on 7/17/2020 and a case was opened by MSRC on 7/22/2020. MSRC concluded 
+their investigation on 8/25/2020 and determined the findings are valid but do 
+not meet their bar for immediate servicing. At this time their case is closed, 
+without resolution, and is marked for future review, with no timeline.
+
+We disagree on the severity of this bug, this was communicated to MSRC on 
+8/27/2020. 
+1. There are similar vulnerabilities in this class (hollowing and 
+doppelganging). 
+1. The vunerailibity is shown to defeat security features inherent to the 
+OS (Windows Defender).
+1. The vulnerability allows an actor to gain execution of arbitrary code.
+1. The user is not notified of the execution of unintended code.
+1. The process information presented to the user does not accurately reflect 
+what is executing. 
+1. Facilities to accurately identify the process are not intuitive or 
+incorrect, even from the kernel. 
+
+
 # Source 
 This repo contains a tool for exercising the herpaderping method of process 
 obfuscation. Usage is as follows:
@@ -812,6 +833,7 @@ Usage:
                            the handle is held open as long as possible.
                            Without this option the handle has full share
                            access and is closed as soon as possible.
+  -u,--do-not-flush-file   Does not flush file after overwrite.
 ```
 
 ## Cloning and Building
