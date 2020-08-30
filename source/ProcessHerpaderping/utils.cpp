@@ -328,7 +328,8 @@ HRESULT Utils::SetFilePointer(
 _Use_decl_annotations_
 HRESULT Utils::CopyFileByHandle(
     handle_t SourceHandle, 
-    handle_t TargetHandle)
+    handle_t TargetHandle,
+    bool FlushFile)
 {
     //
     // Get the file sizes.
@@ -380,7 +381,10 @@ HRESULT Utils::CopyFileByHandle(
                                              nullptr));
     }
 
-    RETURN_IF_WIN32_BOOL_FALSE(FlushFileBuffers(TargetHandle));
+    if (FlushFile)
+    {
+        RETURN_IF_WIN32_BOOL_FALSE(FlushFileBuffers(TargetHandle));
+    }
     RETURN_IF_WIN32_BOOL_FALSE(SetEndOfFile(TargetHandle));
 
     return S_OK;
@@ -389,7 +393,8 @@ HRESULT Utils::CopyFileByHandle(
 _Use_decl_annotations_
 HRESULT Utils::OverwriteFileContentsWithPattern(
     handle_t FileHandle,
-    std::span<const uint8_t> Pattern)
+    std::span<const uint8_t> Pattern,
+    bool FlushFile)
 {
     uint64_t targetSize;
     RETURN_IF_FAILED(GetFileSize(FileHandle, targetSize));
@@ -426,7 +431,10 @@ HRESULT Utils::OverwriteFileContentsWithPattern(
         bytesRemaining -= bytesWritten;
     }
 
-    RETURN_IF_WIN32_BOOL_FALSE(FlushFileBuffers(FileHandle));
+    if (FlushFile)
+    {
+        RETURN_IF_WIN32_BOOL_FALSE(FlushFileBuffers(FileHandle));
+    }
 
     return S_OK;
 }
@@ -436,7 +444,8 @@ HRESULT Utils::ExtendFileWithPattern(
     handle_t FileHandle,
     uint64_t NewFileSize,
     std::span<const uint8_t> Pattern,
-    uint32_t& AppendedBytes)
+    uint32_t& AppendedBytes,
+    bool FlushFile)
 {
     AppendedBytes = 0;
 
@@ -484,7 +493,10 @@ HRESULT Utils::ExtendFileWithPattern(
         AppendedBytes += bytesWritten;
     }
 
-    RETURN_IF_WIN32_BOOL_FALSE(FlushFileBuffers(FileHandle));
+    if (FlushFile)
+    {
+        RETURN_IF_WIN32_BOOL_FALSE(FlushFileBuffers(FileHandle));
+    }
 
     return S_OK;
 }
@@ -494,7 +506,8 @@ HRESULT Utils::OverwriteFileAfterWithPattern(
     handle_t FileHandle,
     uint64_t FileOffset,
     std::span<const uint8_t> Pattern,
-    uint32_t& WrittenBytes)
+    uint32_t& WrittenBytes,
+    bool FlushFile)
 {
     WrittenBytes = 0;
 
@@ -542,7 +555,10 @@ HRESULT Utils::OverwriteFileAfterWithPattern(
         WrittenBytes += bytesWritten;
     }
 
-    RETURN_IF_WIN32_BOOL_FALSE(FlushFileBuffers(FileHandle));
+    if (FlushFile)
+    {
+        RETURN_IF_WIN32_BOOL_FALSE(FlushFileBuffers(FileHandle));
+    }
 
     return S_OK;
 }
@@ -550,7 +566,8 @@ HRESULT Utils::OverwriteFileAfterWithPattern(
 _Use_decl_annotations_
 HRESULT Utils::ExtendFileSecurityDirectory(
     handle_t FileHandle,
-    uint32_t ExtendedBy)
+    uint32_t ExtendedBy,
+    bool FlushFile)
 {
     uint64_t targetSize;
     RETURN_IF_FAILED(GetFileSize(FileHandle, targetSize));
@@ -638,7 +655,10 @@ HRESULT Utils::ExtendFileSecurityDirectory(
     view.reset();
     mapping.reset();
 
-    RETURN_IF_WIN32_BOOL_FALSE(FlushFileBuffers(FileHandle));
+    if (FlushFile)
+    {
+        RETURN_IF_WIN32_BOOL_FALSE(FlushFileBuffers(FileHandle));
+    }
 
     return S_OK;
 }
