@@ -725,32 +725,67 @@ HRESULT Utils::GetImageEntryPointRva(
 _Use_decl_annotations_
 HRESULT Utils::WriteRemoteProcessParameters(
     handle_t ProcessHandle,
-    const wchar_t* ImageFileName,
-    void* RemotePEBProcessParametersAddress)
+    void* RemotePEBProcessParametersAddress,
+    const std::optional<std::wstring>& DllPath,
+    const std::wstring ImageFileName,
+    const std::optional<std::wstring>& CurrentDirectory,
+    const std::optional<std::wstring>& CommandLine,
+    const std::optional<std::wstring>& WindowTitle,
+    const std::optional<std::wstring>& DesktopInfo,
+    const std::optional<std::wstring>& ShellInfo,
+    const std::optional<std::wstring>& RuntimeData)
 {
+    auto getOpt = [](
+        const std::optional<std::wstring>& String
+        ) -> const wchar_t*
+    {
+        if (String.has_value())
+        {
+            return String->c_str();
+        }
+        return L"";
+    };
+    
+    UNICODE_STRING dllPath;
+    RtlInitUnicodeString(&dllPath, getOpt(DllPath));
     UNICODE_STRING imageName;
-    RtlInitUnicodeString(&imageName, ImageFileName);
+    RtlInitUnicodeString(&imageName, ImageFileName.c_str());
+    UNICODE_STRING commandLine;
+    RtlInitUnicodeString(&commandLine, getOpt(CommandLine));
+    UNICODE_STRING currentDirectory;
+    RtlInitUnicodeString(&currentDirectory, getOpt(CurrentDirectory));
+    UNICODE_STRING windowTitle;
+    RtlInitUnicodeString(&windowTitle, getOpt(WindowTitle));
+    UNICODE_STRING desktopInfo;
+    RtlInitUnicodeString(&desktopInfo, getOpt(DesktopInfo));
+    UNICODE_STRING shellInfo;
+    RtlInitUnicodeString(&shellInfo, getOpt(ShellInfo));
+    UNICODE_STRING runtimeData;
+    RtlInitUnicodeString(&runtimeData, getOpt(RuntimeData));
 
     wil::unique_user_process_parameters params;
-    auto status = RtlCreateProcessParametersEx(&params,
-                                               &imageName,
-                                               nullptr,
-                                               nullptr,
-                                               nullptr,
-                                               nullptr,
-                                               nullptr,
-                                               nullptr,
-                                               nullptr,
-                                               nullptr,
-                                               RTL_USER_PROC_PARAMS_NORMALIZED);
+    auto status = RtlCreateProcessParametersEx(
+                               &params,
+                               &imageName,
+                               &dllPath,
+                               &currentDirectory,
+                               &commandLine,
+                               NtCurrentPeb()->ProcessParameters->Environment,
+                               &windowTitle,
+                               &desktopInfo,
+                               &shellInfo,
+                               &runtimeData,
+                               RTL_USER_PROC_PARAMS_NORMALIZED);
     if (!NT_SUCCESS(status))
     {
         RETURN_LAST_ERROR_SET(RtlNtStatusToDosError(status));
     }
 
+    size_t len = params.get()->MaximumLength + params.get()->EnvironmentSize;
+
     auto remoteMemory = VirtualAllocEx(ProcessHandle,
                                        params.get(),
-                                       params.get()->Length,
+                                       len,
                                        MEM_COMMIT | MEM_RESERVE,
                                        PAGE_READWRITE);
     RETURN_IF_NULL_ALLOC(remoteMemory);
@@ -763,7 +798,7 @@ HRESULT Utils::WriteRemoteProcessParameters(
     RETURN_IF_WIN32_BOOL_FALSE(WriteProcessMemory(ProcessHandle,
                                                   remoteParams,
                                                   params.get(),
-                                                  params.get()->Length,
+                                                  len,
                                                   nullptr));
 
     //
