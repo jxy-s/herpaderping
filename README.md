@@ -1,7 +1,7 @@
 # Process Herpaderping 
 ![][png.mimioogle]
 
-Process herpaderping is a method of obscuring the intentions of a process by 
+Process Herpaderping is a method of obscuring the intentions of a process by 
 modifying the content on disk after the image has been mapped. This results 
 in curious behavior by security products and the OS itself.
 
@@ -718,35 +718,35 @@ conditions, you can in fact write to it. Remain vigilant on your assumptions,
 always question them, and do you research.
 
 The motivation for this research came about when discovering how to do analysis 
-when a file is written. With prior background researching process hollowing and 
-doppelganging, I had theorized this might be possible. The goal is to provide 
+when a file is written. With prior background researching process Hollowing and 
+Doppelganging, I had theorized this might be possible. The goal is to provide 
 better security. You cannot create a better lock without first understanding 
 how to break the old one.
 
 ### Similar Techniques
-Herpaderping is similar to hollowing and doppelganging however there are some 
+Herpaderping is similar to Hollowing and Doppelganging however there are some 
 key differences:
 
 #### Process Hollowing
-Process hollowing involves modifying the mapped section before execution 
+Process Hollowing involves modifying the mapped section before execution 
 begins, which abstractly this looks like: `map -> modify section -> execute`. This workflow 
-results in the intended execution flow of the hollowed process diverging into 
-unintended code. Doppelganging might be considered a form of hollowing. 
-However, hollowing, in my opinion, is closer to injection in that hollowing 
+results in the intended execution flow of the Hollowed process diverging into 
+unintended code. Doppelganging might be considered a form of Hollowing. 
+However, Hollowing, in my opinion, is closer to injection in that Hollowing 
 usually involves an explicit write to the already mapped code. This differs 
-from herpaderping where there are no modified sections.
+from Herpaderping where there are no modified sections.
 
 #### Process Doppelganging
-Process doppelganging is closer to herpaderping. Doppelganging abuses 
+Process Doppelganging is closer to Herpaderping. Doppelganging abuses 
 transacted file operations and generally involves these steps: 
 `transact -> write -> map -> rollback -> execute`. 
 In this workflow, the OS will create the image section and account for 
 transactions, so the cached image section ends up being what you wrote to the 
 transaction. The OS has patched this technique. Well, they patched the crash it caused. 
 Maybe they consider this a "legal" use of a transaction. Thankfully, Windows 
-Defender does catch the doppelganging technique. Doppelganging differs from 
-herpaderping in that herpaderping does not rely on transacted file operations. 
-And Defender doesn't catch herpaderping.
+Defender does catch the Doppelganging technique. Doppelganging differs from 
+Herpaderping in that Herpaderping does not rely on transacted file operations. 
+And Defender doesn't catch Herpaderping.
 
 #### Comparison
 For reference, the generalized techniques: 
@@ -756,9 +756,9 @@ For reference, the generalized techniques:
 | Doppelganging | `transact -> write -> map -> rollback -> execute` |
 | Herpaderping  | `write -> map -> modify -> execute -> close`      |
 
-We can see the differences laid out here. While herpaderping is arguably 
-noisier than doppelganging, in that the malicious bits do hit the disk, we've 
-seen that security products are still incapable of detecting herpaderping. 
+We can see the differences laid out here. While Herpaderping is arguably 
+noisier than Doppelganging, in that the malicious bits do hit the disk, we've 
+seen that security products are still incapable of detecting Herpaderping. 
 
 ## Possible Solution
 There is not a clear fix here. It seems reasonable that preventing an image 
@@ -798,11 +798,11 @@ their investigation on 8/25/2020 and determined the findings are valid but do
 not meet their bar for immediate servicing. At this time their case is closed, 
 without resolution, and is marked for future review, with no timeline.
 
-We disagree on the severity of this bug, this was communicated to MSRC on 
+We disagree on the severity of this bug; this was communicated to MSRC on 
 8/27/2020. 
-1. There are similar vulnerabilities in this class (hollowing and 
-doppelganging). 
-1. The vunerailibity is shown to defeat security features inherent to the 
+1. There are similar vulnerabilities in this class (Hollowing and 
+Doppelganging). 
+1. The vulnerability is shown to defeat security features inherent to the 
 OS (Windows Defender).
 1. The vulnerability allows an actor to gain execution of arbitrary code.
 1. The user is not notified of the execution of unintended code.
@@ -813,7 +813,7 @@ incorrect, even from the kernel.
 
 
 # Source 
-This repo contains a tool for exercising the herpaderping method of process 
+This repo contains a tool for exercising the Herpaderping method of process 
 obfuscation. Usage is as follows:
 ```
 Process Herpaderping Tool - Copyright (c) Johnny Shaw
