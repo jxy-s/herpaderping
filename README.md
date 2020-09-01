@@ -1,4 +1,6 @@
 # Process Herpaderping 
+![][png.mimioogle]
+
 Process herpaderping is a method of obscuring the intentions of a process by 
 modifying the content on disk after the image has been mapped. This results 
 in curious behavior by security products and the OS itself.
@@ -772,6 +774,7 @@ Below is a list of products and Windows OSes that have been tested as of
 | Windows 7 Enterprise x86            | 6.1.7601        | Yes        |
 | Windows 10 Pro x64                  | 10.0.18363.900  | Yes        |
 | Windows 10 Pro Insider Preview x64  | 10.0.20170.1000 | Yes        |
+| Windows 10 Pro Insider Preview x64  | 10.0.20201.1000 | Yes        |
 
 | Security Product                    | Version       | Vulnerable |
 | :---------------------------------- | :------------ | :--------: |
@@ -783,6 +786,10 @@ Below is a list of products and Windows OSes that have been tested as of
 | Windows Defender Engine             | 1.1.17300.2   | Yes        |
 | Windows Defender Antivirus          | 1.319.1676.0  | Yes        |
 | Windows Defender Antispyware        | 1.319.1676.0  | Yes        |
+| Windows Defender AntiMalware Client | 4.18.2007.8   | Yes        |
+| Windows Defender Engine             | 1.1.17400.5   | Yes        |
+| Windows Defender Antivirus          | 1.323.267.0   | Yes        |
+| Windows Defender Antispyware        | 1.323.267.0   | Yes        |
 
 ## Responsible Disclosure
 This vulnerability was disclosed to the Microsoft Security Response Center 
@@ -872,3 +879,4 @@ symbol files, as well as a lot of reverse engineering and guessing.
 [gif.ProcessHerpaderp]: res/ProcessHerpaderp.gif
 [gif.SurivDemo]: res/SurivDemo.gif
 [png.procmon]: res/procmon.png
+[png.mimioogle]: res/mimioogle.png

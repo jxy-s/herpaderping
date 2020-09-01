@@ -317,8 +317,15 @@ HRESULT Herpaderp::ExecuteProcess(
                remotePebProcessParams);
 
     hr = Utils::WriteRemoteProcessParameters(processHandle.get(),
-                                             TargetFileName.c_str(),
-                                             remotePebProcessParams);
+                                             remotePebProcessParams,
+                                             std::nullopt,
+                                             TargetFileName,
+                                             L"C:\\Windows\\system32\\",
+                                             (L"\"" + TargetFileName + L"\""),
+                                             TargetFileName,
+                                             L"WinSta0\\Default",
+                                             std::nullopt,
+                                             std::nullopt);
     if (FAILED(hr))
     {
         Utils::Log(Log::Error, 

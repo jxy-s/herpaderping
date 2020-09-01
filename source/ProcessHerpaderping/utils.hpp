@@ -420,20 +420,49 @@ namespace Utils
     /// <param name="ProcessHandle">
     /// Process to write parameters into.
     /// </param>
-    /// <param name="ImageFileName">
-    /// Image file name to write into the parameters.
-    /// </param>
     /// <param name="RemotePEBProcessParametersAddress">
     /// Remote address of ProcessParameters in the process PEB. The remote 
     /// address of the process parameters is written here.
+    /// </param>
+    /// <param name="DllPath">
+    /// Dll path to write into the parameters, optional.
+    /// </param>
+    /// <param name="ImageFileName">
+    /// Image file name to write into the parameters.
+    /// </param>
+    /// <param name="CurrentDirectory">
+    /// Current directory to write into the parameters, optional.
+    /// </param>
+    /// <param name="CommandLine">
+    /// Command line to write into the parameters, optional.
+    /// </param>
+    /// <param name="WindowTitle">
+    /// Window title to write into the parameters, optional.
+    /// </param>
+    /// <param name="DesktopInfo">
+    /// Desktop info to write into the parameters, optional.
+    /// </param>
+    /// <param name="ShellInfo">
+    /// ShellInfo to write into the parameters, optional.
+    /// </param>
+    /// <param name="RuntimeData">
+    /// Runtime data to write into the parameters, optional.
     /// </param>
     /// <returns>
     /// Success if the remote process parameters are written.
     /// </returns>
     _Must_inspect_result_ HRESULT WriteRemoteProcessParameters(
         _In_ handle_t ProcessHandle,
-        _In_ const wchar_t* ImageFileName,
-        _In_ void* RemotePEBProcessParametersAddress);
+        _In_ void* RemotePEBProcessParametersAddress,
+        _In_opt_ const std::optional<std::wstring>& DllPath,
+        _In_ const std::wstring ImageFileName,
+        _In_opt_ const std::optional<std::wstring>& CurrentDirectory,
+        _In_opt_ const std::optional<std::wstring>& CommandLine,
+        _In_opt_ const std::optional<std::wstring>& WindowTitle,
+        _In_opt_ const std::optional<std::wstring>& DesktopInfo,
+        _In_opt_ const std::optional<std::wstring>& ShellInfo,
+        _In_opt_ const std::optional<std::wstring>& RuntimeData);
+
 
 }
 
