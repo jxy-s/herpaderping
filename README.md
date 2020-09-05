@@ -715,7 +715,7 @@ to how the OS will handle data. In this scenario, some might expect the file on
 disk to remain "locked" when the process is created. You can't delete the file. 
 You can't write to it. But you can rename it. Seen here, under the right 
 conditions, you can in fact write to it. Remain vigilant on your assumptions, 
-always question them, and do you research.
+always question them, and do your research.
 
 The motivation for this research came about when discovering how to do analysis 
 when a file is written. With prior background researching process Hollowing and 
@@ -767,7 +767,7 @@ should close the hole. However, that may or may not be a practical solution.
 
 ## Known Affected Platforms
 Below is a list of products and Windows OSes that have been tested as of 
-(7/14/2020). Tests were carried out with a known malicious binary.
+(8/31/2020). Tests were carried out with a known malicious binary.
 
 | Operating System                    | Version         | Vulnerable |
 | :---------------------------------- | :-------------- | :--------: |
