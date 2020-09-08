@@ -67,7 +67,8 @@ HRESULT Utils::HandleCommandLineArgs(
     IArgumentParser& Parser)
 {
     if (SUCCEEDED(CheckForHelpOptions(Argc, Argv)) ||
-        FAILED(Parser.ParseArguments(Argc, Argv)))
+        FAILED(Parser.ParseArguments(Argc, Argv)) ||
+        FAILED(Parser.ValidateArguments()))
     {
         if (Header.has_value())
         {

@@ -69,6 +69,15 @@
 #define CCAST(_X_) const_cast<_X_>
 #define DCAST(_X_) dynamic_cast<_X_>
 #define Add2Ptr(_P_, _X_) RCAST(void*)(RCAST(uintptr_t)(_P_) + _X_)
+#ifndef FlagOn
+#define FlagOn(_F_, _X_) ((_F_) & (_X_))
+#endif
+#ifndef SetFlag
+#define SetFlag(_F_, _X_) ((_F_) |= (_X_))
+#endif
+#ifndef ClearFlag
+#define ClearFlag(_F_, _X_) ((_F_) &= ~(_X_))
+#endif
 using handle_t = HANDLE;
 
 //

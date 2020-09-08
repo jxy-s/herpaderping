@@ -15,10 +15,14 @@ HRESULT Herpaderp::ExecuteProcess(
     const std::wstring& TargetFileName,
     const std::optional<std::wstring>& ReplaceWithFileName,
     std::span<const uint8_t> Pattern, 
-    bool WaitForProcess,
-    bool HoldHandleExclusive,
-    bool FlushFile)
+    uint32_t Flags)
 {
+    if (FlagOn(Flags, FlagHoldHandleExclusive) && 
+        FlagOn(Flags, FlagCloseFileEarly))
+    {
+        return E_INVALIDARG;
+    }
+
     wil::unique_handle processHandle;
     //
     // If something goes wrong, we'll terminate the process.
@@ -55,7 +59,7 @@ HRESULT Herpaderp::ExecuteProcess(
     }
 
     DWORD shareMode = (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE);
-    if (HoldHandleExclusive)
+    if (FlagOn(Flags, FlagHoldHandleExclusive))
     {
         Utils::Log(Log::Information, 
                    L"Creating target file with exclusive access");
@@ -201,7 +205,7 @@ HRESULT Herpaderp::ExecuteProcess(
         //
         hr = Utils::CopyFileByHandle(replaceWithHandle.get(),
                                      targetHandle.get(),
-                                     FlushFile);
+                                     FlagOn(Flags, FlagFlushFile));
         if (FAILED(hr))
         {
             if (hr != HRESULT_FROM_WIN32(ERROR_USER_MAPPED_FILE))
@@ -234,11 +238,12 @@ HRESULT Herpaderp::ExecuteProcess(
             }
 
             uint32_t bytesWritten = 0;
-            hr = Utils::OverwriteFileAfterWithPattern(targetHandle.get(),
-                                                      replaceWithSize,
-                                                      Pattern,
-                                                      bytesWritten,
-                                                      FlushFile);
+            hr = Utils::OverwriteFileAfterWithPattern(
+                                                targetHandle.get(),
+                                                replaceWithSize,
+                                                Pattern,
+                                                bytesWritten,
+                                                FlagOn(Flags, FlagFlushFile));
             if (FAILED(hr))
             {
                 Utils::Log(Log::Warning, 
@@ -247,9 +252,10 @@ HRESULT Herpaderp::ExecuteProcess(
             }
             else
             {
-                hr = Utils::ExtendFileSecurityDirectory(targetHandle.get(),
-                                                        bytesWritten,
-                                                        FlushFile);
+                hr = Utils::ExtendFileSecurityDirectory(
+                                                targetHandle.get(),
+                                                bytesWritten,
+                                                FlagOn(Flags, FlagFlushFile));
                 if (FAILED(hr))
                 {
                     Utils::Log(Log::Warning,
@@ -266,9 +272,10 @@ HRESULT Herpaderp::ExecuteProcess(
         //
         Utils::Log(Log::Success, L"Overwriting target with pattern");
 
-        hr = Utils::OverwriteFileContentsWithPattern(targetHandle.get(),
-                                                     Pattern,
-                                                     FlushFile);
+        hr = Utils::OverwriteFileContentsWithPattern(
+                                                targetHandle.get(),
+                                                Pattern,
+                                                FlagOn(Flags, FlagFlushFile));
         if (FAILED(hr))
         {
             Utils::Log(Log::Error, 
@@ -334,6 +341,15 @@ HRESULT Herpaderp::ExecuteProcess(
         RETURN_HR(hr);
     }
 
+    if (FlagOn(Flags, FlagCloseFileEarly))
+    {
+        //
+        // Caller wants to close the file early, before the notification
+        // callback in the kernel would fire, do so.
+        //
+        targetHandle.reset();
+    }
+
     //
     // Create the initial thread, when this first thread is inserted the
     // process create callback will fire in the kernel.
@@ -373,7 +389,7 @@ HRESULT Herpaderp::ExecuteProcess(
     //
     terminateProcess.release();
 
-    if (!HoldHandleExclusive)
+    if (!FlagOn(Flags, FlagHoldHandleExclusive))
     {
         //
         // We're done with the target file handle. At this point the process 
@@ -382,7 +398,7 @@ HRESULT Herpaderp::ExecuteProcess(
         targetHandle.reset();
     }
 
-    if (WaitForProcess)
+    if (FlagOn(Flags, FlagWaitForProcess))
     {
         //
         // Wait for the process to exit.

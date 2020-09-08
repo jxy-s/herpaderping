@@ -9,6 +9,31 @@
 
 namespace Herpaderp
 {
+#pragma warning(push)
+#pragma warning(disable : 4634)  // xmldoc: discarding XML document comment for invalid target 
+    /// <summary>
+    /// Waits for process to exit before returning.
+    /// </summary>
+    constexpr static uint32_t FlagWaitForProcess = 0x00000001ul;
+
+    /// <summary>
+    /// Opens and hold the target file handle exclusive for as long as 
+    /// reasonable. This flag is incompatible with FlagCloseFileEarly.
+    /// </summary>
+    constexpr static uint32_t FlagHoldHandleExclusive = 0x00000002ul;
+
+    /// <summary>
+    /// Flushes file buffers of target file.
+    /// </summary>
+    constexpr static uint32_t FlagFlushFile = 0x00000004ul;
+
+    /// <summary>
+    /// Closes the file handle early, before creating the initial thread 
+    /// (before process notification would fire in the kernel). This flag is 
+    /// not compatible with FlagHoldHandleExclusive.
+    /// </summary>
+    constexpr static uint32_t FlagCloseFileEarly = 0x00000008ul;
+#pragma warning(pop)
 
     /// <summary>
     /// Executes process herpaderping.
@@ -26,15 +51,8 @@ namespace Herpaderp
     /// <param name="Pattern">
     /// Pattern used for obfuscation.
     /// </param>
-    /// <param name="WaitForProcess">
-    /// If true, function waits for the herpaderped process to exit.
-    /// </param>
-    /// <param name="HoldHandleExclusive">
-    /// If true, the function creates the target file with exclusive access 
-    /// and holds the handle open longer.
-    /// </param>
-    /// <param name="FlushFile">
-    /// Flushes file after overwrite if true, if false the file is not flushed.
+    /// <param name="Flags">
+    /// Flags controlling behavior of herpaderping (Herpaderp::FlagXxx).
     /// </param>
     /// <returns>
     /// Success if the herpaderping executed. Failure otherwise.
@@ -44,8 +62,6 @@ namespace Herpaderp
         _In_ const std::wstring& TargetFileName,
         _In_opt_ const std::optional<std::wstring>& ReplaceWithFileName,
         _In_ std::span<const uint8_t> Pattern, 
-        _In_ bool WaitForProcess,
-        _In_ bool HoldHandleExclusive,
-        _In_ bool FlushFile);
+        _In_ uint32_t Flags);
 
 }

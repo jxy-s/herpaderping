@@ -841,6 +841,9 @@ Usage:
                            Without this option the handle has full share
                            access and is closed as soon as possible.
   -u,--do-not-flush-file   Does not flush file after overwrite.
+  -c,--close-file-early    Closes file before thread creation (before the
+                           process notify callback fires in the kernel).
+                           Not valid with "--exclusive" option.
 ```
 
 ## Cloning and Building
