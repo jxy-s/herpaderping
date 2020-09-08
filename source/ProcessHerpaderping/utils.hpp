@@ -52,6 +52,14 @@ namespace Utils
         /// </returns>
         virtual std::wstring_view GetUsage() const = 0;
 
+        /// <summary>
+        /// Provides the interface an opportunity to validate the parsed 
+        /// arguments. If the arguments are invalid (for example, two options 
+        /// are used that may not be specified together) the implementation 
+        /// may return failure here to indicate the arguments are invalid.
+        /// </summary>
+        _Must_inspect_result_ virtual HRESULT ValidateArguments() const = 0;
+
     protected:
         IArgumentParser() = default;
     };
@@ -463,7 +471,4 @@ namespace Utils
         _In_opt_ const std::optional<std::wstring>& ShellInfo,
         _In_opt_ const std::optional<std::wstring>& RuntimeData);
 
-
 }
-
-

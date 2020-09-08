@@ -53,6 +53,9 @@ L"                           the handle is held open as long as possible.\n"
 L"                           Without this option the handle has full share\n"
 L"                           access and is closed as soon as possible.\n"
 L"  -u,--do-not-flush-file   Does not flush file after overwrite.\n"
+L"  -c,--close-file-early    Closes file before thread creation (before the\n"
+L"                           process notify callback fires in the kernel).\n"
+L"                           Not valid with \"--exclusive\" option.\n"
     };
 
     Parameters() = default;
@@ -110,7 +113,7 @@ L"  -u,--do-not-flush-file   Does not flush file after overwrite.\n"
             }
             if (SUCCEEDED(Utils::MatchParameter(arg, L"d", L"do-not-wait")))
             {
-                m_WaitForProcess = false;
+                ClearFlag(m_HerpaderpFlags, Herpaderp::FlagWaitForProcess);
                 continue;
             }
             if (SUCCEEDED(Utils::MatchParameter(arg, L"q", L"quiet")))
@@ -125,12 +128,17 @@ L"  -u,--do-not-flush-file   Does not flush file after overwrite.\n"
             }
             if (SUCCEEDED(Utils::MatchParameter(arg, L"e", L"exclusive")))
             {
-                m_HoldHandleExclusive = true;
+                SetFlag(m_HerpaderpFlags, Herpaderp::FlagHoldHandleExclusive);
                 continue;
             }
             if (SUCCEEDED(Utils::MatchParameter(arg, L"u", L"do-not-flush-file")))
             {
-                m_FlushFile = false;
+                ClearFlag(m_HerpaderpFlags, Herpaderp::FlagFlushFile);
+                continue;
+            }
+            if (SUCCEEDED(Utils::MatchParameter(arg, L"c", L"close-file-early")))
+            {
+                SetFlag(m_HerpaderpFlags, Herpaderp::FlagCloseFileEarly);
                 continue;
             }
 
@@ -140,6 +148,19 @@ L"  -u,--do-not-flush-file   Does not flush file after overwrite.\n"
             m_ReplaceWith = arg;
         }
 
+        return S_OK;
+    }
+
+    _Must_inspect_result_ virtual HRESULT ValidateArguments() const override
+    {
+        if (FlagOn(m_HerpaderpFlags, Herpaderp::FlagHoldHandleExclusive) &&
+            FlagOn(m_HerpaderpFlags, Herpaderp::FlagCloseFileEarly))
+        {
+            //
+            // These options are incompatible.
+            //
+            return E_FAIL;
+        }
         return S_OK;
     }
 
@@ -178,13 +199,6 @@ L"  -u,--do-not-flush-file   Does not flush file after overwrite.\n"
         return m_LoggingMask;
     }
 
-    /// <summary>Gets the wait for process boolean.</summary>
-    /// <returns>Wait for process boolean.</returns>
-    bool WaitForProcess() const
-    {
-        return m_WaitForProcess;
-    }
-
     /// <summary>Gets the quiet boolean.</summary>
     /// <returns>Quiet boolean.</returns>
     bool Quiet() const
@@ -199,18 +213,11 @@ L"  -u,--do-not-flush-file   Does not flush file after overwrite.\n"
         return m_RandomObfuscation;
     }
 
-    /// <summary>Gets the hold handle exclusive boolean.</summary>
-    /// <returns>Hold handle exclusive boolean.</returns>
-    bool HoldFileExlusive() const
+    /// <summary>Gets herpaderp flags.</summary>
+    /// <returns>Herpaderp flags.</returns>
+    uint32_t HerpaderpFlags() const
     {
-        return m_HoldHandleExclusive;
-    }
-
-    /// <summary>Gets flush file boolean.</summary> 
-    /// <returns>Flush file boolean.</returns> 
-    bool FlushFile() const
-    {
-        return m_FlushFile;
+        return m_HerpaderpFlags;
     }
     
 private:
@@ -219,11 +226,13 @@ private:
     std::wstring m_FileName;
     std::optional<std::wstring> m_ReplaceWith{ std::nullopt };
     uint32_t m_LoggingMask{ 0xfffffffful };
-    bool m_WaitForProcess{ true };
     bool m_Quiet{ false };
     bool m_RandomObfuscation{ false };
-    bool m_HoldHandleExclusive{ false };
-    bool m_FlushFile{ true };
+    uint32_t m_HerpaderpFlags
+    { 
+        Herpaderp::FlagWaitForProcess | 
+        Herpaderp::FlagFlushFile 
+    };
 };
 
 /// <summary>
@@ -292,9 +301,7 @@ int wmain(
                                    params.FileName(), 
                                    params.ReplaceWith(), 
                                    pattern,
-                                   params.WaitForProcess(),
-                                   params.HoldFileExlusive(),
-                                   params.FlushFile());
+                                   params.HerpaderpFlags());
     if (FAILED(hr))
     {
         Utils::Log(Log::Error, hr, L"Process Herpaderp Failed");
