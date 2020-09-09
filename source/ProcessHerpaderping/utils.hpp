@@ -15,6 +15,7 @@ namespace Log
     constexpr static uint32_t Warning{     0x00000004ul };
     constexpr static uint32_t Error{       0x00000008ul };
     constexpr static uint32_t Context{     0x00000010ul };
+    constexpr static uint32_t Debug{       0x80000000ul };
 
 }
 
@@ -428,10 +429,6 @@ namespace Utils
     /// <param name="ProcessHandle">
     /// Process to write parameters into.
     /// </param>
-    /// <param name="RemotePEBProcessParametersAddress">
-    /// Remote address of ProcessParameters in the process PEB. The remote 
-    /// address of the process parameters is written here.
-    /// </param>
     /// <param name="DllPath">
     /// Dll path to write into the parameters, optional.
     /// </param>
@@ -443,6 +440,9 @@ namespace Utils
     /// </param>
     /// <param name="CommandLine">
     /// Command line to write into the parameters, optional.
+    /// </param>
+    /// <param name="EnvironmentBlock">
+    /// Environment block to write into the parameters, optional.
     /// </param>
     /// <param name="WindowTitle">
     /// Window title to write into the parameters, optional.
@@ -461,14 +461,26 @@ namespace Utils
     /// </returns>
     _Must_inspect_result_ HRESULT WriteRemoteProcessParameters(
         _In_ handle_t ProcessHandle,
-        _In_ void* RemotePEBProcessParametersAddress,
-        _In_opt_ const std::optional<std::wstring>& DllPath,
         _In_ const std::wstring ImageFileName,
+        _In_opt_ const std::optional<std::wstring>& DllPath,
         _In_opt_ const std::optional<std::wstring>& CurrentDirectory,
         _In_opt_ const std::optional<std::wstring>& CommandLine,
+        _In_opt_ void* EnvironmentBlock,
         _In_opt_ const std::optional<std::wstring>& WindowTitle,
         _In_opt_ const std::optional<std::wstring>& DesktopInfo,
         _In_opt_ const std::optional<std::wstring>& ShellInfo,
         _In_opt_ const std::optional<std::wstring>& RuntimeData);
+
+    /// <summary>
+    /// Re-base an address from an original base address to another.
+    /// </summary>
+    /// <param name="Address">Address to re-base.</param>
+    /// <param name="Base">Original base address.</param>
+    /// <param name="NewBase">New base address.</param>
+    /// <returns>Success if the Address is re-based.</returns>
+    _Must_inspect_result_ HRESULT RebaseAddress(
+        _Inout_ void** Address,
+        _In_ void* Base,
+        _In_ void* NewBase);
 
 }

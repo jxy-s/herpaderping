@@ -168,6 +168,10 @@ static const wchar_t* GetLogLevelPrefix(_In_ uint32_t Level)
     {
         return L"[INFO]  ";
     }
+    else if (Level & Log::Debug)
+    {
+        return L"[DEBUG] ";
+    }
 
     return L"[OK]    ";
 }
@@ -723,75 +727,216 @@ HRESULT Utils::GetImageEntryPointRva(
     return S_OK;
 }
 
+class OptionalUnicodeStringHelper
+{
+public:
+
+    OptionalUnicodeStringHelper(
+        _In_opt_ const std::optional<std::wstring>& String) :
+        m_String(String)
+    {
+        if (m_String.has_value())
+        {
+            RtlInitUnicodeString(&m_Unicode, m_String->c_str());
+        }
+        else
+        {
+            RtlInitUnicodeString(&m_Unicode, L"");
+        }
+    }
+
+    PUNICODE_STRING Get()
+    {
+        if (m_String.has_value())
+        {
+            return &m_Unicode;
+        }
+        return nullptr;
+    }
+
+    operator PUNICODE_STRING()
+    {
+        return Get();
+    }
+
+private:
+
+    const std::optional<std::wstring>& m_String;
+    UNICODE_STRING m_Unicode;
+
+};
+
+HRESULT RebaseProcessParameters(
+    RTL_USER_PROCESS_PARAMETERS* Parameters,
+    void* NewBase)
+{
+    //
+    // The normalized process parameters are a contiguous block of memory, the 
+    // pointers are all relative to the original base. Go through and re-base 
+    // the addresses to the new base address.
+    //
+    RETURN_IF_FAILED(Utils::RebaseAddress(
+        RCAST(void**)(&Parameters->CurrentDirectory.DosPath.Buffer),
+        Parameters,
+        NewBase));
+    RETURN_IF_FAILED(Utils::RebaseAddress(
+        RCAST(void**)(&Parameters->DllPath.Buffer),
+        Parameters,
+        NewBase));
+    RETURN_IF_FAILED(Utils::RebaseAddress(
+        RCAST(void**)(&Parameters->ImagePathName.Buffer),
+        Parameters,
+        NewBase));
+    RETURN_IF_FAILED(Utils::RebaseAddress(
+        RCAST(void**)(&Parameters->CommandLine.Buffer),
+        Parameters,
+        NewBase));
+    RETURN_IF_FAILED(Utils::RebaseAddress(
+        RCAST(void**)(&Parameters->Environment),
+        Parameters,
+        NewBase));
+    RETURN_IF_FAILED(Utils::RebaseAddress(
+        RCAST(void**)(&Parameters->WindowTitle.Buffer),
+        Parameters,
+        NewBase));
+    RETURN_IF_FAILED(Utils::RebaseAddress(
+        RCAST(void**)(&Parameters->DesktopInfo.Buffer),
+        Parameters,
+        NewBase));
+    RETURN_IF_FAILED(Utils::RebaseAddress(
+        RCAST(void**)(&Parameters->ShellInfo.Buffer),
+        Parameters,
+        NewBase));
+    RETURN_IF_FAILED(Utils::RebaseAddress(
+        RCAST(void**)(&Parameters->RuntimeData.Buffer),
+        Parameters,
+        NewBase));
+    for (size_t i = 0; i < RTL_MAX_DRIVE_LETTERS; i++)
+    {
+        RETURN_IF_FAILED(Utils::RebaseAddress(
+            RCAST(void**)(&Parameters->CurrentDirectories[i].DosPath.Buffer),
+            Parameters,
+            NewBase));
+    }
+    RETURN_IF_FAILED(Utils::RebaseAddress(
+        RCAST(void**)(&Parameters->PackageDependencyData),
+        Parameters,
+        NewBase));
+    RETURN_IF_FAILED(Utils::RebaseAddress(
+        RCAST(void**)(&Parameters->RedirectionDllName.Buffer),
+        Parameters,
+        NewBase));
+    RETURN_IF_FAILED(Utils::RebaseAddress(
+        RCAST(void**)(&Parameters->HeapPartitionName.Buffer),
+        Parameters,
+        NewBase));
+    return S_OK;
+}
+
 _Use_decl_annotations_
 HRESULT Utils::WriteRemoteProcessParameters(
     handle_t ProcessHandle,
-    void* RemotePEBProcessParametersAddress,
-    const std::optional<std::wstring>& DllPath,
     const std::wstring ImageFileName,
+    const std::optional<std::wstring>& DllPath,
     const std::optional<std::wstring>& CurrentDirectory,
     const std::optional<std::wstring>& CommandLine,
+    void* EnvironmentBlock,
     const std::optional<std::wstring>& WindowTitle,
     const std::optional<std::wstring>& DesktopInfo,
     const std::optional<std::wstring>& ShellInfo,
     const std::optional<std::wstring>& RuntimeData)
 {
-    auto getOpt = [](
-        const std::optional<std::wstring>& String
-        ) -> const wchar_t*
-    {
-        if (String.has_value())
-        {
-            return String->c_str();
-        }
-        return L"";
-    };
-    
-    UNICODE_STRING dllPath;
-    RtlInitUnicodeString(&dllPath, getOpt(DllPath));
+    //
+    // Get the basic info for the remote PEB address.
+    //
+    PROCESS_BASIC_INFORMATION pbi{};
+    RETURN_IF_NTSTATUS_FAILED(NtQueryInformationProcess(
+                                                      ProcessHandle,
+                                                      ProcessBasicInformation,
+                                                      &pbi,
+                                                      sizeof(pbi),
+                                                      nullptr));
+
+    //
+    // Generate the process parameters to write into the process.
+    //
     UNICODE_STRING imageName;
     RtlInitUnicodeString(&imageName, ImageFileName.c_str());
-    UNICODE_STRING commandLine;
-    RtlInitUnicodeString(&commandLine, getOpt(CommandLine));
-    UNICODE_STRING currentDirectory;
-    RtlInitUnicodeString(&currentDirectory, getOpt(CurrentDirectory));
-    UNICODE_STRING windowTitle;
-    RtlInitUnicodeString(&windowTitle, getOpt(WindowTitle));
-    UNICODE_STRING desktopInfo;
-    RtlInitUnicodeString(&desktopInfo, getOpt(DesktopInfo));
-    UNICODE_STRING shellInfo;
-    RtlInitUnicodeString(&shellInfo, getOpt(ShellInfo));
-    UNICODE_STRING runtimeData;
-    RtlInitUnicodeString(&runtimeData, getOpt(RuntimeData));
-
+    OptionalUnicodeStringHelper dllPath(DllPath);
+    OptionalUnicodeStringHelper commandLine(CommandLine);
+    OptionalUnicodeStringHelper currentDirectory(CurrentDirectory);
+    OptionalUnicodeStringHelper windowTitle(WindowTitle);
+    OptionalUnicodeStringHelper desktopInfo(DesktopInfo);
+    OptionalUnicodeStringHelper shellInfo(ShellInfo);
+    OptionalUnicodeStringHelper runtimeData(RuntimeData);
     wil::unique_user_process_parameters params;
-    auto status = RtlCreateProcessParametersEx(
-                               &params,
-                               &imageName,
-                               &dllPath,
-                               &currentDirectory,
-                               &commandLine,
-                               NtCurrentPeb()->ProcessParameters->Environment,
-                               &windowTitle,
-                               &desktopInfo,
-                               &shellInfo,
-                               &runtimeData,
-                               RTL_USER_PROC_PARAMS_NORMALIZED);
-    if (!NT_SUCCESS(status))
-    {
-        RETURN_LAST_ERROR_SET(RtlNtStatusToDosError(status));
-    }
+    RETURN_IF_NTSTATUS_FAILED(RtlCreateProcessParametersEx(
+                                            &params,
+                                            &imageName,
+                                            dllPath,
+                                            currentDirectory,
+                                            commandLine,
+                                            EnvironmentBlock,
+                                            windowTitle,
+                                            desktopInfo,
+                                            shellInfo,
+                                            runtimeData,
+                                            RTL_USER_PROC_PARAMS_NORMALIZED));
 
+    //
+    // Calculate the required length.
+    //
     size_t len = params.get()->MaximumLength + params.get()->EnvironmentSize;
 
+    //
+    // Try to allocate in the remote process where the process parameters was 
+    // allocated for us. This makes it easy to just copy in the current 
+    // address.
+    //
+    void* remoteParams;
     auto remoteMemory = VirtualAllocEx(ProcessHandle,
                                        params.get(),
                                        len,
                                        MEM_COMMIT | MEM_RESERVE,
                                        PAGE_READWRITE);
-    RETURN_IF_NULL_ALLOC(remoteMemory);
+    if (remoteMemory != nullptr)
+    {
+        remoteParams = params.get();
+    }
+    else
+    {
+        Utils::Log(Log::Debug, 
+                   L"Remote allocation failed, %p 0x%Ix",
+                   params.get(),
+                   len);
+        //
+        // Bummer, we'll need to allocate from anywhere and fix up the 
+        // parameters...
+        //
+        remoteMemory = VirtualAllocEx(ProcessHandle,
+                                      nullptr,
+                                      len,
+                                      MEM_COMMIT | MEM_RESERVE,
+                                      PAGE_READWRITE);
 
-    void* remoteParams = params.get();
+        RETURN_IF_NULL_ALLOC(remoteMemory);
+
+        remoteParams = remoteMemory;
+
+        Utils::Log(Log::Debug, 
+                   L"Fixing up remote parameters, %p to %p",
+                   params.get(),
+                   remoteParams);
+
+        RETURN_IF_FAILED(RebaseProcessParameters(params.get(),
+                                                 remoteParams));
+
+    }
+
+    Utils::Log(Log::Debug, 
+               L"Writing remote parameters, %p 0x%Ix",
+               remoteParams,
+               len);
 
     //
     // Write the parameters into the remote process.
@@ -805,11 +950,51 @@ HRESULT Utils::WriteRemoteProcessParameters(
     //
     // Write the parameter pointer to the remote process PEB.
     //
-    RETURN_IF_WIN32_BOOL_FALSE(WriteProcessMemory(ProcessHandle,
-                                                  RemotePEBProcessParametersAddress,
-                                                  &remoteParams,
-                                                  sizeof(remoteParams),
-                                                  nullptr));
+    RETURN_IF_WIN32_BOOL_FALSE(WriteProcessMemory(
+                                 ProcessHandle,
+                                 Add2Ptr(pbi.PebBaseAddress,
+                                         FIELD_OFFSET(PEB, ProcessParameters)),
+                                 &remoteParams,
+                                 sizeof(remoteParams),
+                                 nullptr));
 
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT Utils::RebaseAddress(
+    void** Address,
+    void* Base,
+    void* NewBase)
+{
+    if (*Address == nullptr)
+    {
+        return S_OK;
+    }
+    ULONG_PTR addr = RCAST(ULONG_PTR)(*Address);
+    ULONG_PTR origBase = RCAST(ULONG_PTR)(Base);
+    ULONG_PTR newBase = RCAST(ULONG_PTR)(NewBase);
+    ULONG_PTR rebased = 0;
+    ULONG_PTR offset = 0;
+    if (addr > origBase)
+    {
+        offset = (addr - origBase);
+        if ((SCAST(ULONG_PTR)(-1) - newBase) < offset)
+        {
+            return E_FAIL;
+        }
+        rebased = newBase + offset;
+    }
+    else
+    {
+        offset = (addr - origBase);
+        if (newBase < offset)
+        {
+            return E_FAIL;
+        }
+        rebased = newBase - offset;
+    }
+
+    *Address = RCAST(void*)(0ull + rebased);
     return S_OK;
 }

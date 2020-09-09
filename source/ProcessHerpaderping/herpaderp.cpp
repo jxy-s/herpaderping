@@ -316,23 +316,21 @@ HRESULT Herpaderp::ExecuteProcess(
                                          L"Failed to read remote process PEB"));
     }
 
-    void* remotePebProcessParams = Add2Ptr(pbi.PebBaseAddress,
-                                           FIELD_OFFSET(PEB, ProcessParameters));
-
     Utils::Log(Log::Information,
                L"Writing process parameters, remote PEB ProcessParameters 0x%p",
-               remotePebProcessParams);
+               Add2Ptr(pbi.PebBaseAddress, FIELD_OFFSET(PEB, ProcessParameters)));
 
-    hr = Utils::WriteRemoteProcessParameters(processHandle.get(),
-                                             remotePebProcessParams,
-                                             std::nullopt,
-                                             TargetFileName,
-                                             L"C:\\Windows\\system32\\",
-                                             (L"\"" + TargetFileName + L"\""),
-                                             TargetFileName,
-                                             L"WinSta0\\Default",
-                                             std::nullopt,
-                                             std::nullopt);
+    hr = Utils::WriteRemoteProcessParameters(
+                               processHandle.get(),
+                               TargetFileName,
+                               std::nullopt,
+                               std::nullopt,
+                               (L"\"" + TargetFileName + L"\""),
+                               NtCurrentPeb()->ProcessParameters->Environment,
+                               TargetFileName,
+                               L"WinSta0\\Default",
+                               std::nullopt,
+                               std::nullopt);
     if (FAILED(hr))
     {
         Utils::Log(Log::Error, 
