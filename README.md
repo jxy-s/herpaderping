@@ -47,11 +47,55 @@ we create the initial thread to begin execution of the original binary. Finally,
     - Since we've hidden the contents of what is executing, inspection at this 
       point will result in incorrect attribution.
 
+![][svg.StateDiagram]
+<details>
+    <summary>plantuml</summary>
+
+```plantuml
+@startuml
+hide empty description
+
+[*] --> CreateFile
+CreateFile --> FileHandle
+FileHandle --> Write
+FileHandle --> NtCreateSection
+Write -[hidden]-> NtCreateSection
+NtCreateSection --> SectionHandle
+SectionHandle --> NtCreateProcessEx
+FileHandle --> Modify
+NtCreateProcessEx -[hidden]-> Modify
+NtCreateProcessEx --> NtCreateThreadEx
+Modify -[hidden]-> NtCreateThreadEx
+NtCreateThreadEx --> [*]
+FileHandle --> CloseFile
+NtCreateThreadEx -[hidden]-> CloseFile
+NtCreateThreadEx --> PspCallProcessNotifyRoutines
+PspCallProcessNotifyRoutines -[hidden]-> [*]
+CloseFile --> IRP_MJ_CLEANUP
+IRP_MJ_CLEANUP -[hidden]-> [*]
+PspCallProcessNotifyRoutines --> Inspect
+PspCallProcessNotifyRoutines -[hidden]-> CloseFile 
+IRP_MJ_CLEANUP --> Inspect
+Inspect -[hidden]-> [*]
+
+CreateFile : Create target file, keep handle open.
+Write : Write source payload into target file.
+Modify : Obscure the file on disk.
+NtCreateSection : Create section using file handle.
+NtCreateProcessEx : Image section for process is mapped and cached in file object.
+NtCreateThreadEx : The cached section is used.
+NtCreateThreadEx : Process notify routines fire in kernel.
+Inspect : The contents on disk do not match what was executed. 
+Inspect : Inspection of the file at this point will result in incorrect attribution.
+@enduml
+```
+</details>
+
 ## Behavior
 You'll see in the demo below, `CMD.exe` is used as the execution target. The 
-first run overwrites the bytes on disk with a pattern. The second run overwrites `CMD.exe` 
-with `ProcessHacker.exe`. The Herpaderping tool fixes up the binary to look 
-as close to `ProcessHacker.exe` as possible, even retaining the original 
+first run overwrites the bytes on disk with a pattern. The second run overwrites 
+`CMD.exe` with `ProcessHacker.exe`. The Herpaderping tool fixes up the binary to 
+look as close to `ProcessHacker.exe` as possible, even retaining the original 
 signature. Note the multiple executions of the same binary and how the process 
 looks to the user compared to what is in the file on disk.
 
@@ -883,3 +927,4 @@ symbol files, as well as a lot of reverse engineering and guessing.
 [gif.SurivDemo]: res/SurivDemo.gif
 [png.procmon]: res/procmon.png
 [png.mimioogle]: res/mimioogle.png
+[svg.StateDiagram]: res/StateDiagram.svg
