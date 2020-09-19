@@ -103,15 +103,14 @@ looks to the user compared to what is in the file on disk.
 
 ![][png.procmon]
 
-### Diving Deeper
-<details> <!--- Collapsible "Diving Deeper" section --->
-    <summary>click to expand this section</summary>
-
+### Diving Deeper <a name="tag-diving-deeper"></a>
 We've observed the behavior and some of this may be surprising. Let's try to 
 explain this behavior.
 
-#### Repeated executions despite the bits on disk changing
+<details> <!--- Collapsible "Diving Deeper" section --->
+    <summary>click to expand this section</summary>
 
+#### Repeated executions despite the bits on disk changing
 Let's try to understand why the process successfully executes multiple times 
 despite the bits on disk not being `CMD.exe`. Below is some `WinDbg` output. 
 I've executed the tool as in the demo above, the first herpaderped process was 
@@ -596,8 +595,171 @@ fffff802`2f4f9385 ebe2            jmp     nt!MiClearFilePointer+0x41 (fffff802`2
 ```
 </details>
 
-#### What this means for the process creation callback 
+#### When is the image section cached? 
+Given the information in the previous section, we know the image section object
+is cached in the [FILE_OBJECT][msdn.FILE_OBJECT], this image section is then 
+used as a "reference" image section when a new process is created, finally we 
+know that this cached "reference" image section is shared between each 
+[FILE_OBJECT][msdn.FILE_OBJECT]. 
 
+But when is that initial section created and cached? This is strait forward to 
+identify with some breakpoints:
+
+<details>
+    <summary>windbg output</summary>
+
+```
+2: kd> bp nt!NtCreateSection
+2: kd> g
+Breakpoint 1 hit
+nt!NtCreateSection:
+fffff804`3ebd9fe0 4053            push    rbx
+3: kd> bp /w @$curprocess.Name.Contains("Herpaderp")
+breakpoint 1 redefined
+3: kd> g;k
+0: kd> k
+ # Child-SP          RetAddr               Call Site
+00 fffff58c`00d83a08 fffff804`3e7d2e15     nt!NtCreateSection
+01 fffff58c`00d83a10 00007fff`c0ebca04     nt!KiSystemServiceCopyEnd+0x25
+02 00000012`076fe9e8 00007fff`c0e6b365     ntdll!NtCreateSection+0x14
+03 00000012`076fe9f0 00007fff`c0e6b662     ntdll!CsrpConnectToServer+0x1b1
+04 00000012`076febe0 00007fff`be7fadf2     ntdll!CsrClientConnectToServer+0xe2
+05 00000012`076fec40 00007fff`be7faa5d     KERNELBASE!_KernelBaseBaseDllInitialize+0x212
+06 00000012`076feec0 00007fff`c0e450a1     KERNELBASE!KernelBaseDllInitialize+0xd
+07 00000012`076feef0 00007fff`c0e89405     ntdll!LdrpCallInitRoutine+0x65
+08 00000012`076fef60 00007fff`c0e891f8     ntdll!LdrpInitializeNode+0x1b1
+09 00000012`076ff0a0 00007fff`c0e89222     ntdll!LdrpInitializeGraphRecurse+0x80
+0a 00000012`076ff0e0 00007fff`c0e4aa97     ntdll!LdrpInitializeGraphRecurse+0xaa
+0b 00000012`076ff120 00007fff`c0e42591     ntdll!LdrpPrepareModuleForExecution+0xbf
+0c 00000012`076ff160 00007fff`c0e422a8     ntdll!LdrpLoadDllInternal+0x199
+0d 00000012`076ff1e0 00007fff`c0e41764     ntdll!LdrpLoadDll+0xa8
+0e 00000012`076ff390 00007fff`c0ef4193     ntdll!LdrLoadDll+0xe4
+0f 00000012`076ff480 00007fff`c0ee1df5     ntdll!LdrpInitializeProcess+0x1a0b
+10 00000012`076ff8c0 00007fff`c0e91853     ntdll!_LdrpInitialize+0x50589
+11 00000012`076ff960 00007fff`c0e917fe     ntdll!LdrpInitialize+0x3b
+12 00000012`076ff990 00000000`00000000     ntdll!LdrInitializeThunk+0xe
+0: kd> g;k
+Breakpoint 1 hit
+ # Child-SP          RetAddr               Call Site
+00 fffff58c`00d83a08 fffff804`3e7d2e15     nt!NtCreateSection
+01 fffff58c`00d83a10 00007fff`c0ebca04     nt!KiSystemServiceCopyEnd+0x25
+02 00000012`076fdee8 00007ff7`511b6bcb     ntdll!NtCreateSection+0x14
+03 00000012`076fdef0 00000012`076fe048     ProcessHerpaderping!Herpaderp::ExecuteProcess+0x4bb
+1: kd> !handle 0xac
+
+PROCESS ffffa78260243440
+    SessionId: 2  Cid: 043c    Peb: 12075a2000  ParentCid: 2200
+    DirBase: 36641002  ObjectTable: ffffd08243acfe00  HandleCount:  41.
+    Image: ProcessHerpaderping.exe
+
+Handle table at ffffd08243acfe00 with 41 entries in use
+
+00ac: Object: ffffa782611330b0  GrantedAccess: 0012019f Entry: ffffd08246cef2b0
+Object: ffffa782611330b0  Type: (ffffa782594fb2a0) File
+    ObjectHeader: ffffa78261133080 (new version)
+        HandleCount: 1  PointerCount: 32754
+        Directory Object: 00000000  Name: \Users\Jxy\Desktop\lol.exe {HarddiskVolume4}
+
+1: kd> dx ((nt!_FILE_OBJECT*)0xffffa782611330b0)->SectionObjectPointer
+((nt!_FILE_OBJECT*)0xffffa782611330b0)->SectionObjectPointer                 : 0xffffa78260d1e708 [Type: _SECTION_OBJECT_POINTERS *]
+    [+0x000] DataSectionObject : 0xffffa7825ce5fb30 [Type: void *]
+    [+0x008] SharedCacheMap   : 0xffffa78260e24da0 [Type: void *]
+    [+0x010] ImageSectionObject : 0x0 [Type: void *]
+1: kd> ba w8 0xffffa78260d1e708+0x10
+1: kd> g
+Breakpoint 2 hit
+nt!MiReferenceControlArea+0x129:
+fffff804`3e62d7f1 33d2            xor     edx,edx
+1: kd> k
+ # Child-SP          RetAddr               Call Site
+00 fffff58c`00d835c0 fffff804`3ebda7f1     nt!MiReferenceControlArea+0x129
+01 fffff58c`00d83650 fffff804`3ebdac54     nt!MiCreateImageOrDataSection+0x171
+02 fffff58c`00d83740 fffff804`3ebda2af     nt!MiCreateSection+0xf4
+03 fffff58c`00d838c0 fffff804`3ebda040     nt!MiCreateSectionCommon+0x1ff
+04 fffff58c`00d839a0 fffff804`3e7d2e15     nt!NtCreateSection+0x60
+05 fffff58c`00d83a10 00007fff`c0ebca04     nt!KiSystemServiceCopyEnd+0x25
+06 00000012`076fdee8 00007ff7`511b6bcb     ntdll!NtCreateSection+0x14
+07 00000012`076fdef0 00000012`076fe048     ProcessHerpaderping!Herpaderp::ExecuteProcess+0x4bb
+1: kd> dx ((nt!_FILE_OBJECT*)0xffffa782611330b0)->SectionObjectPointer
+((nt!_FILE_OBJECT*)0xffffa782611330b0)->SectionObjectPointer                 : 0xffffa78260d1e708 [Type: _SECTION_OBJECT_POINTERS *]
+    [+0x000] DataSectionObject : 0xffffa7825ce5fb30 [Type: void *]
+    [+0x008] SharedCacheMap   : 0xffffa78260e24da0 [Type: void *]
+    [+0x010] ImageSectionObject : 0xfffff58c00d83680 [Type: void *]
+```
+</details>
+
+The above `WinDbg` output shows the image section object is cached within the 
+first [FILE_OBJECT][msdn.FILE_OBJECT] at the call to 
+[NtCreateSection][msdn.NtCreateSection]. We abuse this by forcing the OS to 
+cache an image section object that will be used when process is executed. 
+Before we begin execution of the process, we obscure the content on disk, 
+the changes are not reflected in the cached image section.
+
+There is an opportunity to inspect section creation from the kernel. 
+[IRP_MJ_ACQUIRE_FOR_SECTION_SYNCHRONIZATION][msdn.IRP_MJ_ACQUIRE_FOR_SECTION_SYNCHRONIZATION]
+is invoked when the file and section control area locks are acquired. However, 
+there is not a clear indicator in the callback data, in this case, the 
+callback data does not contain the `AllocationAttributes` (`SEC_IMAGE`). For 
+the exploit, in this path, the `PageProtection` will only show `PAGE_READONLY`. 
+There are no `AllocationAttributes`, a future release on Windows 10 will extend 
+this data to include the `AllocationAttributes`. So, `SEC_IMAGE` will be 
+available, however inspection here is not ideal as software will map in this 
+manner without the intention of executing a new process. Placing a hook sooner 
+in this call stack might help, but we run into the same complications with 
+respect to processes creating a section in this manner without the intention 
+of using it to execute a process.
+
+I'll note here that the section this section is then mapped into the process at 
+the `NtCreateProcess` call:
+
+<details>
+    <summary>windbg output</summary>
+
+```
+3: kd> k
+ # Child-SP          RetAddr               Call Site
+00 fffff58c`00d836d8 fffff804`3ed81a63     nt!PspAllocateProcess
+01 fffff58c`00d836e0 fffff804`3eec5df5     nt!PspCreateProcess+0x233
+02 fffff58c`00d839b0 fffff804`3e7d2e15     nt!NtCreateProcessEx+0x85
+03 fffff58c`00d83a10 00007fff`c0ebca64     nt!KiSystemServiceCopyEnd+0x25
+04 00000012`076fdee8 00007ff7`511b6d71     ntdll!NtCreateProcessEx+0x14
+05 00000012`076fdef0 00000012`076fdf58     ProcessHerpaderping!Herpaderp::ExecuteProcess+0x661
+3: kd> gu
+nt!PspCreateProcess+0x233:
+fffff804`3ed81a63 8bf0            mov     esi,eax
+0: kd> gu
+nt!NtCreateProcessEx+0x85:
+fffff804`3eec5df5 4883c458        add     rsp,58h
+0: kd> !process 0 0 lol.exe
+PROCESS ffffa78260fb8080
+    SessionId: 2  Cid: 02b4    Peb: e52ac5f000  ParentCid: 043c
+    DirBase: 42546002  ObjectTable: ffffd0824a0f4a40  HandleCount:   3.
+    Image: lol.exe
+
+0: kd> .process /r /p ffffa78260fb8080
+Implicit process is now ffffa782`60fb8080
+.cache forcedecodeuser done
+Loading User Symbols
+PEB is paged out (Peb.Ldr = 000000e5`2ac5f018).  Type ".hh dbgerr001" for details
+0: kd> !vad
+VAD             Level         Start             End              Commit
+ffffa782606ef080  3           7ffe0           7ffe0               1 Private      READONLY           
+ffffa782606ef120  2           7ffeb           7ffeb               1 Private      READONLY           
+ffffa782606f06b0  1         e52ac00         e52adff               1 Private      READWRITE          
+ffffa7825d3fea50  3        20ba8dc0        20ba8dda               0 Mapped       READONLY           Pagefile section, shared commit 0x1b
+ffffa7825d3ff630  2       7df5e58e0       7df5e58e0               0 Mapped       READONLY           Pagefile section, shared commit 0x1
+ffffa7825d3ff590  3       7df5e58f0       7df5e5912               0 Mapped       READONLY           Pagefile section, shared commit 0x23
+ffffa7825d3ff3b0  0       7df5e5920       7ff5e591f               2 Mapped       NO_ACCESS          Pagefile section, shared commit 0xdd6
+ffffa7825d3fd8d0  1       7ff7f4200       7ff7f4264              29 Mapped  Exe  EXECUTE_WRITECOPY  \Users\Jxy\Desktop\lol.exe
+ffffa7825d3fe4b0  2       7fffc0e20       7fffc100f              16 Mapped  Exe  EXECUTE_WRITECOPY  \Windows\System32\ntdll.dll
+
+Total VADs: 9, average level: 2, maximum depth: 3
+Total private commit: 0x32 pages (200 KB)
+Total shared commit:  0xe7a pages (14824 KB)
+```
+</details>
+
+#### What this means for the process creation callback 
 [PS_CREATE_NOTIFY_INFO][msdn.PS_CREATE_NOTIFY_INFO] contains a `FileObject`, 
 which according to the documentation, is the file object of the process being 
 created. How does [PS_CREATE_NOTIFY_INFO][msdn.PS_CREATE_NOTIFY_INFO] in the 
@@ -809,6 +971,36 @@ There is not a clear fix here. It seems reasonable that preventing an image
 section from being mapped/cached when there is write access to the file 
 should close the hole. However, that may or may not be a practical solution.
 
+Another option might be to flush the changes to the file through to the cached 
+image section if it hasn't yet been mapped into a process. However, since the 
+map into the new process occurs at `NtCreateProcess` that is probably not a 
+viable solution.
+
+From a detection standpoint, there is not a great way to identify the actual 
+bits that got mapped, inspection at [IRP_MJ_CLEANUP][msdn.IRP_MJ_CLEANUP] or 
+a callback registered at 
+[PsSetCreateProcessNotifyRoutineEx][msdn.PsSetCreateProcessNotifyRoutineEx] 
+results in incorrect attribution since the bits on disk have been changed, you 
+would have to rebuild the file from the section that got created. It's worth 
+pointing out here there is a new callback in Windows 10 you may register for 
+[PsSetCreateProcessNotifyRoutineEx2][msdn.PsSetCreateProcessNotifyRoutineEx2] 
+however this suffers from the same problem as the previous callback, it's 
+called out when the initial thread is executed, not when the process object is 
+created. Microsoft did add 
+[PsSetCreateThreadNotifyRoutineEx][msdn.PsSetCreateThreadNotifyRoutineEx] which 
+is called out when the initial thread is inserted if registered with 
+[PsCreateThreadNotifyNonSystem][msdn.PSCREATETHREADNOTIFYTYPE], opposed to when 
+it is about to begin execution (as the old callback did). Extending 
+[PSCREATEPROCESSNOTIFYTYPE][msdn.PSCREATEPROCESSNOTIFYTYPE] to be called out 
+when the process object is created won't help either, we've seen in the 
+[Diving Deeper](#tag-diving-deeper) section that the image section object is 
+cached on the [NtCreateSection][msdn.NtCreateSection] call not 
+`NtCreateProcess`.
+
+We can't easily identify what got executed. We're left with trying to detect 
+the exploitive behavior by the actor, I'll leave discovery of the behavior 
+indicators as an exercise for the reader.
+
 ## Known Affected Platforms
 Below is a list of products and Windows OSes that have been tested as of 
 (8/31/2020). Tests were carried out with a known malicious binary.
@@ -913,6 +1105,10 @@ symbol files, as well as a lot of reverse engineering and guessing.
 [github.wil]: https://github.com/microsoft/wil
 [github.phnt]: https://github.com/processhacker/phnt
 [msdn.PsSetCreateProcessNotifyRoutineEx]: https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/nf-ntddk-pssetcreateprocessnotifyroutineex
+[msdn.PsSetCreateProcessNotifyRoutineEx2]: https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/nf-ntddk-pssetcreateprocessnotifyroutineex2
+[msdn.PsSetCreateThreadNotifyRoutineEx]: https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/nf-ntddk-pssetcreatethreadnotifyroutineex
+[msdn.PSCREATETHREADNOTIFYTYPE]: https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/ne-ntddk-_pscreatethreadnotifytype
+[msdn.PSCREATEPROCESSNOTIFYTYPE]: https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/ne-ntddk-_pscreateprocessnotifytype
 [msdn.IRP_MJ_CLEANUP]: https://docs.microsoft.com/en-us/windows-hardware/drivers/kernel/irp-mj-cleanup
 [msdn.NtCreateSection]: https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/nf-wdm-zwcreatesection
 [msdn.SEC_IMAGE]: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createfilemappinga
