@@ -1080,6 +1080,10 @@ Usage:
   -c,--close-file-early    Closes file before thread creation (before the
                            process notify callback fires in the kernel).
                            Not valid with "--exclusive" option.
+  -k,--kill                Terminates the spawned process regardless of
+                           success or failure, this is useful in some
+                           automation environments. Forces "--do-not-wait
+                           option.
 ```
 
 ## Cloning and Building

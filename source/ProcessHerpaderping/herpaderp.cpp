@@ -20,6 +20,18 @@ HRESULT Herpaderp::ExecuteProcess(
     if (FlagOn(Flags, FlagHoldHandleExclusive) && 
         FlagOn(Flags, FlagCloseFileEarly))
     {
+        //
+        // Incompatible flags.
+        //
+        return E_INVALIDARG;
+    }
+
+    if (FlagOn(Flags, FlagWaitForProcess) &&
+        FlagOn(Flags, FlagKillSpawnedProcess))
+    {
+        //
+        // Incompatible flags.
+        //
         return E_INVALIDARG;
     }
 
@@ -382,10 +394,13 @@ HRESULT Herpaderp::ExecuteProcess(
                L"Created thread, TID %lu",
                GetThreadId(threadHandle.get()));
 
-    //
-    // Process was executed successfully. Do not terminate.
-    //
-    terminateProcess.release();
+    if (!FlagOn(Flags, FlagKillSpawnedProcess))
+    {
+        //
+        // Process was executed successfully. Do not terminate.
+        //
+        terminateProcess.release();
+    }
 
     if (!FlagOn(Flags, FlagHoldHandleExclusive))
     {
