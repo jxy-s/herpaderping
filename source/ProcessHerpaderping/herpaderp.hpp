@@ -33,6 +33,12 @@ namespace Herpaderp
     /// not compatible with FlagHoldHandleExclusive.
     /// </summary>
     constexpr static uint32_t FlagCloseFileEarly = 0x00000008ul;
+
+    /// <summary>
+    /// Terminates the spawned process on success, this can be useful in some 
+    /// automation environments. Not compatible with FlagWaitForProcess.
+    /// </summary>
+    constexpr static uint32_t FlagKillSpawnedProcess = 0x00000010ul;
 #pragma warning(pop)
 
     /// <summary>

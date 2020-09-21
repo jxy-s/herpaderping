@@ -56,6 +56,10 @@ L"  -u,--do-not-flush-file   Does not flush file after overwrite.\n"
 L"  -c,--close-file-early    Closes file before thread creation (before the\n"
 L"                           process notify callback fires in the kernel).\n"
 L"                           Not valid with \"--exclusive\" option.\n"
+L"  -k,--kill                Terminates the spawned process regardless of\n"
+L"                           success or failure, this is useful in some\n"
+L"                           automation environments. Forces \"--do-not-wait\n"
+L"                           option."
     };
 
     Parameters() = default;
@@ -139,6 +143,12 @@ L"                           Not valid with \"--exclusive\" option.\n"
             if (SUCCEEDED(Utils::MatchParameter(arg, L"c", L"close-file-early")))
             {
                 SetFlag(m_HerpaderpFlags, Herpaderp::FlagCloseFileEarly);
+                continue;
+            }
+            if (SUCCEEDED(Utils::MatchParameter(arg, L"k", L"kill")))
+            {
+                SetFlag(m_HerpaderpFlags, Herpaderp::FlagKillSpawnedProcess);
+                ClearFlag(m_HerpaderpFlags, Herpaderp::FlagWaitForProcess);
                 continue;
             }
 
