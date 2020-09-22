@@ -766,73 +766,6 @@ private:
 
 };
 
-HRESULT RebaseProcessParameters(
-    RTL_USER_PROCESS_PARAMETERS* Parameters,
-    void* NewBase)
-{
-    //
-    // The normalized process parameters are a contiguous block of memory, the 
-    // pointers are all relative to the original base. Go through and re-base 
-    // the addresses to the new base address.
-    //
-    RETURN_IF_FAILED(Utils::RebaseAddress(
-        RCAST(void**)(&Parameters->CurrentDirectory.DosPath.Buffer),
-        Parameters,
-        NewBase));
-    RETURN_IF_FAILED(Utils::RebaseAddress(
-        RCAST(void**)(&Parameters->DllPath.Buffer),
-        Parameters,
-        NewBase));
-    RETURN_IF_FAILED(Utils::RebaseAddress(
-        RCAST(void**)(&Parameters->ImagePathName.Buffer),
-        Parameters,
-        NewBase));
-    RETURN_IF_FAILED(Utils::RebaseAddress(
-        RCAST(void**)(&Parameters->CommandLine.Buffer),
-        Parameters,
-        NewBase));
-    RETURN_IF_FAILED(Utils::RebaseAddress(
-        RCAST(void**)(&Parameters->Environment),
-        Parameters,
-        NewBase));
-    RETURN_IF_FAILED(Utils::RebaseAddress(
-        RCAST(void**)(&Parameters->WindowTitle.Buffer),
-        Parameters,
-        NewBase));
-    RETURN_IF_FAILED(Utils::RebaseAddress(
-        RCAST(void**)(&Parameters->DesktopInfo.Buffer),
-        Parameters,
-        NewBase));
-    RETURN_IF_FAILED(Utils::RebaseAddress(
-        RCAST(void**)(&Parameters->ShellInfo.Buffer),
-        Parameters,
-        NewBase));
-    RETURN_IF_FAILED(Utils::RebaseAddress(
-        RCAST(void**)(&Parameters->RuntimeData.Buffer),
-        Parameters,
-        NewBase));
-    for (size_t i = 0; i < RTL_MAX_DRIVE_LETTERS; i++)
-    {
-        RETURN_IF_FAILED(Utils::RebaseAddress(
-            RCAST(void**)(&Parameters->CurrentDirectories[i].DosPath.Buffer),
-            Parameters,
-            NewBase));
-    }
-    RETURN_IF_FAILED(Utils::RebaseAddress(
-        RCAST(void**)(&Parameters->PackageDependencyData),
-        Parameters,
-        NewBase));
-    RETURN_IF_FAILED(Utils::RebaseAddress(
-        RCAST(void**)(&Parameters->RedirectionDllName.Buffer),
-        Parameters,
-        NewBase));
-    RETURN_IF_FAILED(Utils::RebaseAddress(
-        RCAST(void**)(&Parameters->HeapPartitionName.Buffer),
-        Parameters,
-        NewBase));
-    return S_OK;
-}
-
 _Use_decl_annotations_
 HRESULT Utils::WriteRemoteProcessParameters(
     handle_t ProcessHandle,
@@ -870,6 +803,17 @@ HRESULT Utils::WriteRemoteProcessParameters(
     OptionalUnicodeStringHelper shellInfo(ShellInfo);
     OptionalUnicodeStringHelper runtimeData(RuntimeData);
     wil::unique_user_process_parameters params;
+
+    //
+    // Generate the process parameters and do not pass
+    // RTL_USER_PROC_PARAMS_NORMALIZED, this will keep the process parameters
+    // de-normalized (pointers will be offsets instead of addresses) then 
+    // LdrpInitializeProcess will call RtlNormalizeProcessParameters and fix
+    // them up when the process starts.
+    //
+    // Note: There is an exception here, the Environment pointer is not
+    // de-normalized - we'll fix that up ourself.
+    //
     RETURN_IF_NTSTATUS_FAILED(RtlCreateProcessParametersEx(
                                             &params,
                                             &imageName,
@@ -881,7 +825,7 @@ HRESULT Utils::WriteRemoteProcessParameters(
                                             desktopInfo,
                                             shellInfo,
                                             runtimeData,
-                                            RTL_USER_PROC_PARAMS_NORMALIZED));
+                                            0));
 
     //
     // Calculate the required length.
@@ -889,60 +833,33 @@ HRESULT Utils::WriteRemoteProcessParameters(
     size_t len = params.get()->MaximumLength + params.get()->EnvironmentSize;
 
     //
-    // Try to allocate in the remote process where the process parameters was 
-    // allocated for us. This makes it easy to just copy in the current 
-    // address.
+    // Allocate memory in the remote process to hold the process parameters.
     //
-    void* remoteParams;
     auto remoteMemory = VirtualAllocEx(ProcessHandle,
-                                       params.get(),
+                                       nullptr,
                                        len,
                                        MEM_COMMIT | MEM_RESERVE,
                                        PAGE_READWRITE);
-    if (remoteMemory != nullptr)
+    RETURN_IF_NULL_ALLOC(remoteMemory);
+
+    //
+    // Okay we have some memory in the remote process, go do the final fix-ups.
+    //
+    if (params.get()->Environment != nullptr)
     {
-        remoteParams = params.get();
-    }
-    else
-    {
-        Utils::Log(Log::Debug, 
-                   L"Remote allocation failed, %p 0x%Ix",
-                   params.get(),
-                   len);
         //
-        // Bummer, we'll need to allocate from anywhere and fix up the 
-        // parameters...
+        // The environment block will always be right after the length, which
+        // is the size of RTL_USER_PROCESS_PARAMETERS plus any extra field
+        // data.
         //
-        remoteMemory = VirtualAllocEx(ProcessHandle,
-                                      nullptr,
-                                      len,
-                                      MEM_COMMIT | MEM_RESERVE,
-                                      PAGE_READWRITE);
-
-        RETURN_IF_NULL_ALLOC(remoteMemory);
-
-        remoteParams = remoteMemory;
-
-        Utils::Log(Log::Debug, 
-                   L"Fixing up remote parameters, %p to %p",
-                   params.get(),
-                   remoteParams);
-
-        RETURN_IF_FAILED(RebaseProcessParameters(params.get(),
-                                                 remoteParams));
-
+        params.get()->Environment = Add2Ptr(remoteMemory, params.get()->Length);
     }
-
-    Utils::Log(Log::Debug, 
-               L"Writing remote parameters, %p 0x%Ix",
-               remoteParams,
-               len);
 
     //
     // Write the parameters into the remote process.
     //
     RETURN_IF_WIN32_BOOL_FALSE(WriteProcessMemory(ProcessHandle,
-                                                  remoteParams,
+                                                  remoteMemory,
                                                   params.get(),
                                                   len,
                                                   nullptr));
@@ -954,47 +871,9 @@ HRESULT Utils::WriteRemoteProcessParameters(
                                  ProcessHandle,
                                  Add2Ptr(pbi.PebBaseAddress,
                                          FIELD_OFFSET(PEB, ProcessParameters)),
-                                 &remoteParams,
-                                 sizeof(remoteParams),
+                                 &remoteMemory,
+                                 sizeof(remoteMemory),
                                  nullptr));
 
-    return S_OK;
-}
-
-_Use_decl_annotations_
-HRESULT Utils::RebaseAddress(
-    void** Address,
-    void* Base,
-    void* NewBase)
-{
-    if (*Address == nullptr)
-    {
-        return S_OK;
-    }
-    ULONG_PTR addr = RCAST(ULONG_PTR)(*Address);
-    ULONG_PTR origBase = RCAST(ULONG_PTR)(Base);
-    ULONG_PTR newBase = RCAST(ULONG_PTR)(NewBase);
-    ULONG_PTR rebased = 0;
-    ULONG_PTR offset = 0;
-    if (addr > origBase)
-    {
-        offset = (addr - origBase);
-        if ((SCAST(ULONG_PTR)(-1) - newBase) < offset)
-        {
-            return E_FAIL;
-        }
-        rebased = newBase + offset;
-    }
-    else
-    {
-        offset = (addr - origBase);
-        if (newBase < offset)
-        {
-            return E_FAIL;
-        }
-        rebased = newBase - offset;
-    }
-
-    *Address = RCAST(void*)(0ull + rebased);
     return S_OK;
 }

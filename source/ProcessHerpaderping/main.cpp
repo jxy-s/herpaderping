@@ -235,7 +235,14 @@ private:
     std::wstring m_TargetBinary;
     std::wstring m_FileName;
     std::optional<std::wstring> m_ReplaceWith{ std::nullopt };
-    uint32_t m_LoggingMask{ 0xfffffffful };
+    uint32_t m_LoggingMask
+    {
+        Log::Success |
+        Log::Information |
+        Log::Warning |
+        Log::Error |
+        Log::Context
+    };
     bool m_Quiet{ false };
     bool m_RandomObfuscation{ false };
     uint32_t m_HerpaderpFlags

@@ -471,16 +471,4 @@ namespace Utils
         _In_opt_ const std::optional<std::wstring>& ShellInfo,
         _In_opt_ const std::optional<std::wstring>& RuntimeData);
 
-    /// <summary>
-    /// Re-base an address from an original base address to another.
-    /// </summary>
-    /// <param name="Address">Address to re-base.</param>
-    /// <param name="Base">Original base address.</param>
-    /// <param name="NewBase">New base address.</param>
-    /// <returns>Success if the Address is re-based.</returns>
-    _Must_inspect_result_ HRESULT RebaseAddress(
-        _Inout_ void** Address,
-        _In_ void* Base,
-        _In_ void* NewBase);
-
 }
