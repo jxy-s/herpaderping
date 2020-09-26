@@ -96,3 +96,8 @@ namespace wil
 // prefast suppression
 //
 #pragma warning(disable : 6319)  // prefast: use of the comma-operator in a tested expression
+
+//
+// Internal
+//
+#include "res/version.h"

@@ -1,9 +1,10 @@
 # Process Herpaderping 
-![][png.mimioogle]
-
+[<img align="left" style="margin: 0px 15px 15px 0px;" src="res/HerpaderpIcon.png" width="150"/>][png.HerpaderpIcon]
 Process Herpaderping is a method of obscuring the intentions of a process by 
 modifying the content on disk after the image has been mapped. This results 
 in curious behavior by security products and the OS itself.
+
+![][png.mimioogle]
 
 ![][gif.SurivDemo]
 
@@ -1128,3 +1129,4 @@ symbol files, as well as a lot of reverse engineering and guessing.
 [png.procmon]: res/procmon.png
 [png.mimioogle]: res/mimioogle.png
 [svg.StateDiagram]: res/StateDiagram.svg
+[png.HerpaderpIcon]: res/HerpaderpIcon.png

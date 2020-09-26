@@ -26,7 +26,15 @@
   <ItemGroup>
     <ClInclude Include="herpaderp.hpp" />
     <ClInclude Include="pch.hpp" />
+    <ClInclude Include="res\resource.h" />
+    <ClInclude Include="res\version.h" />
     <ClInclude Include="utils.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\Icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="res\resource.rc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
