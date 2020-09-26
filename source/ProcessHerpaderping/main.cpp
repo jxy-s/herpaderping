@@ -12,8 +12,8 @@
 namespace Constants 
 {
     constexpr static std::wstring_view ToolHeader
-    { 
-        L"Process Herpaderping Tool - Copyright (c) Johnny Shaw" 
+    {
+        WSTR_FILE_DESCRIPTION L" - " WSTR_COPYRIGHT
     };
 
     constexpr static std::array<uint8_t, 4> Pattern{ '\x72', '\x6f', '\x66', '\x6c' };
@@ -29,7 +29,7 @@ class Parameters : public Utils::IArgumentParser
 public:
     constexpr static std::wstring_view Usage
     {
-L"ProcessHerpaderping.exe SourceFile TargetFile [ReplacedWith] [Options...]\n"
+WSTR_ORIGINAL_FILENAME L" SourceFile TargetFile [ReplacedWith] [Options...]\n"
 L"Usage:\n"
 L"  SourceFile               Source file to execute.\n"
 L"  TargetFile               Target file to execute the source from.\n"
