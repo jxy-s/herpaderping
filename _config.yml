@@ -1,7 +1,6 @@
-theme: jekyll-theme-minimal
-title: Process Herpaderping
-description: Detection Evasion Exploit
-use_logo: true
+title: herpaderping
 logo: res/HerpaderpIcon.png
-show_downloads: "true"
-markdown: kramdown
+description: Detection Evasion Exploit
+show_downloads: true
+google_analytics:
+theme: jekyll-theme-minimal
