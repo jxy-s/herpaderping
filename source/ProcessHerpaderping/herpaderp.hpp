@@ -39,6 +39,12 @@ namespace Herpaderp
     /// automation environments. Not compatible with FlagWaitForProcess.
     /// </summary>
     constexpr static uint32_t FlagKillSpawnedProcess = 0x00000010ul;
+
+    /// <summary>
+    /// The target file is created as a directory and the execution occurs from
+    /// an alternate data stream from the directory.
+    /// </summary>
+    constexpr static uint32_t FlagDirectory = 0x00000020ul;
 #pragma warning(pop)
 
     /// <summary>

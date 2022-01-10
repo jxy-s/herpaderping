@@ -70,6 +70,28 @@ HRESULT Herpaderp::ExecuteProcess(
                                          L"Failed to open source file"));
     }
 
+    std::wstring targetFileName = TargetFileName;
+    if (FlagOn(Flags, FlagDirectory))
+    {
+        Utils::Log(Log::Information, 
+                   L"Targeting Directory: \"%ls\"", 
+                   targetFileName.c_str());
+
+        wil::unique_handle dirHandle;
+        if (CreateDirectoryW(targetFileName.c_str(), nullptr) == FALSE)
+        {
+            RETURN_LAST_ERROR_SET(Utils::Log(Log::Error, 
+                                             GetLastError(), 
+                                             L"Failed to create directory"));
+        }
+
+        targetFileName += L":exe";
+
+        Utils::Log(Log::Information, 
+                   L"Using Directory Stream: \"%ls\"", 
+                   targetFileName.c_str());
+    }
+
     DWORD shareMode = (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE);
     if (FlagOn(Flags, FlagHoldHandleExclusive))
     {
@@ -79,7 +101,7 @@ HRESULT Herpaderp::ExecuteProcess(
     }
 
     wil::unique_handle targetHandle;
-    targetHandle.reset(CreateFileW(TargetFileName.c_str(),
+    targetHandle.reset(CreateFileW(targetFileName.c_str(),
                                    GENERIC_READ | GENERIC_WRITE,
                                    shareMode,
                                    nullptr,

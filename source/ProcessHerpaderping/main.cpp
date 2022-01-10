@@ -59,7 +59,10 @@ L"                           Not valid with \"--exclusive\" option.\n"
 L"  -k,--kill                Terminates the spawned process regardless of\n"
 L"                           success or failure, this is useful in some\n"
 L"                           automation environments. Forces \"--do-not-wait\n"
-L"                           option."
+L"                           option.\n"
+L"  -i,--directory           Target file is created as a directory then the\n"
+L"                           source is written to an ASD on that directory.\n"
+L"                           The ADS is then mapped and executed."
     };
 
     Parameters() = default;
@@ -149,6 +152,11 @@ L"                           option."
             {
                 SetFlag(m_HerpaderpFlags, Herpaderp::FlagKillSpawnedProcess);
                 ClearFlag(m_HerpaderpFlags, Herpaderp::FlagWaitForProcess);
+                continue;
+            }
+            if (SUCCEEDED(Utils::MatchParameter(arg, L"i", L"directory")))
+            {
+                SetFlag(m_HerpaderpFlags, Herpaderp::FlagDirectory);
                 continue;
             }
 
